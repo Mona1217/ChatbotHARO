@@ -6,24 +6,20 @@ import os
 import re
 
 from core.menu import MenuHandler
-from storage.session import InMemorySessionStore
-from rag.vector_store import VectorStore
 from config import settings
-from nlu.llm_client import LLMClient
-
 from services.si_client import SIClient
+
 
 
 class ChatBotCore:
     def __init__(self):
         self.menu = MenuHandler()
-        self.sessions = InMemorySessionStore(ttl_seconds=7200)
 
-        self.vector = VectorStore(settings.KB_PATH)
+
+    
         self.vector.load()
 
-        self.llm = LLMClient(settings.OPENAI_MODEL)
-
+        
         # Modo API si hay base URL; de lo contrario, modo DB (QA/local)
         if getattr(settings, "SI_BASE_URL", ""):
             self.provider_mode = "api"
