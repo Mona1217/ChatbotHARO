@@ -7,467 +7,69 @@
   <meta name="theme-color" content="#128C7E" />
   <style>
     :root{
-      /* Paleta clara tipo WhatsApp */
-      --wa-green:#128C7E;
-      --wa-green-dark:#075E54;
-      --wa-accent:#25D366;
-      --bg:#E5DDD5;            /* fondo general */
-      --pane:#F0F0F0;          /* header/footer claro */
-      --chat:#EFEAE2;          /* fondo de chat */
-      --bot:#FFFFFF;           /* burbuja bot */
-      --user:#D9FDD3;          /* burbuja usuario (verde claro) */
-      --text:#111B21;          /* texto principal */
-      --muted:#667781;         /* texto secundario */
-      --border:#D1D7DB;        /* bordes claros */
-      --chip:#FFFFFF;          /* chips dentro del chat */
+      --wa-green:#128C7E; --wa-green-dark:#075E54; --wa-accent:#25D366;
+      --bg:#E5DDD5; --pane:#F0F0F0; --chat:#EFEAE2; --bot:#FFFFFF; --user:#D9FDD3;
+      --text:#111B21; --muted:#667781; --border:#D1D7DB;
     }
-    *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     html,body{height:100%}
     body{
-      margin:0;
-      font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,Helvetica,sans-serif;
+      margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,Helvetica,sans-serif;
       color:var(--text);
-      background:
-        radial-gradient(1200px 600px at 10% -10%, rgba(18,140,126,.06), transparent 40%),
-        var(--bg);
-      padding:16px; /* deja respiración (no a borde de pantalla) */
+      background:radial-gradient(1200px 600px at 10% -10%, rgba(18,140,126,.06), transparent 40%), var(--bg);
+      padding:16px;
     }
     .app{
-      display:flex;flex-direction:column;
-      height:calc(100vh - 32px);
-      max-height:860px;
-      max-width:520px;margin:0 auto;
-      background:var(--chat);
-      border-radius:18px;               /* bordes redondeados del contenedor */
-      overflow:hidden;                  /* recorta header/scroll a radios */
-      box-shadow:
-        0 10px 25px rgba(0,0,0,.10),
-        0 2px 8px rgba(0,0,0,.06);
-      border:1px solid rgba(0,0,0,.03);
+      display:flex;flex-direction:column;height:calc(100vh - 32px);max-width:520px;margin:0 auto;
+      background:var(--chat);border-radius:18px;overflow:hidden;
+      box-shadow:0 10px 25px rgba(0,0,0,.10),0 2px 8px rgba(0,0,0,.06);border:1px solid rgba(0,0,0,.03);
     }
-    /* Header estilo WhatsApp */
-    header{
-      display:flex;align-items:center;gap:12px;
-      padding:12px 14px;
-      background:linear-gradient(0deg,var(--wa-green),var(--wa-green-dark));
-      color:#fff;
-      position:sticky;top:0;z-index:5;
-    }
-    .avatar{
-      width:38px;height:38px;border-radius:50%;
-      flex:0 0 auto; position:relative;
-    }
-    .avatar img{
-      width:100%;height:100%;
-      display:block;object-fit:cover;
-      border-radius:50%;               /* foto redondeada */
-      border:2px solid rgba(255,255,255,.65);
-      background:#fff;
-    }
-    .title{display:flex;flex-direction:column;min-width:0}
-    .title b{font-size:15px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    header{display:flex;align-items:center;gap:12px;padding:12px 14px;background:linear-gradient(0deg,var(--wa-green),var(--wa-green-dark));color:#fff}
+    .avatar{width:38px;height:38px;border-radius:50%}
+    .avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;border:2px solid rgba(255,255,255,.65);background:#fff}
+    .title{display:flex;flex-direction:column}
+    .title b{font-size:15px;line-height:1}
     .title small{color:#E9F5F2;opacity:.95}
 
-    /* Chat */
-    .chat{
-      flex:1;overflow:auto;padding:12px 10px 8px;
-      background:
-        radial-gradient(600px 600px at 100% -20%, rgba(0,0,0,.03), transparent 55%),
-        var(--chat);
-    }
+    .chat{flex:1;overflow:auto;padding:12px 10px 0}
     .msg{display:flex;margin:8px 0}
     .msg .bubble{
-      max-width:82%;
-      position:relative;
-      padding:9px 11px;
-      border-radius:10px;
-      line-height:1.42;
-      word-wrap:break-word;
-      box-shadow:0 1px 0 rgba(0,0,0,.04);
-      border:1px solid rgba(0,0,0,.04);
+      max-width:82%;padding:9px 11px;border-radius:10px;line-height:1.42;
+      border:1px solid rgba(0,0,0,.04);box-shadow:0 1px 0 rgba(0,0,0,.04)
     }
-    .bot{justify-content:flex-start}
-    .bot .bubble{
-      background:var(--bot);
-      border-top-left-radius:4px;
-    }
-    .bot .bubble:after{
-      content:"";position:absolute;left:-5px;bottom:0;
-      border-width:6px 6px 0 0;border-style:solid;
-      border-color:var(--bot) transparent transparent transparent;
-      filter:drop-shadow(0 0 0 rgba(0,0,0,.02));
-    }
-    .user{justify-content:flex-end}
-    .user .bubble{
-      background:var(--user);
-      border-top-right-radius:4px;
-    }
-    .user .bubble:after{
-      content:"";position:absolute;right:-5px;bottom:0;
-      border-width:6px 0 0 6px;border-style:solid;
-      border-color:var(--user) transparent transparent transparent;
-    }
-    .time{
-      display:block;margin-top:6px;
-      color:var(--muted);font-size:11px;
-      text-align:right;
-    }
-    /* Chips dentro del chat */
-    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+    .msg.bot{justify-content:flex-start}
+    .msg.bot .bubble{background:var(--bot)}
+    .msg.user{justify-content:flex-end}
+    .msg.user .bubble{background:var(--user)}
+
+    .quick{display:flex;flex-wrap:wrap;gap:8px;padding:8px 10px 10px}
     .chip{
-      background:var(--chip); color:var(--text);
-      border:1px solid var(--border);
-      border-radius:999px; padding:8px 12px;
-      font-size:14px; cursor:pointer;
-      transition:transform .05s ease, background .2s ease;
-      box-shadow:0 1px 0 rgba(0,0,0,.04);
-    }
-    .chip:active{transform:scale(.98)}
-    .chip[disabled]{opacity:.6;pointer-events:none}
-
-    /* Composer inferior */
-    .composer{
-      display:flex;align-items:center;gap:8px;
-      padding:10px;
-      background:var(--pane);
-      border-top:1px solid var(--border);
-      position:sticky;bottom:0;z-index:5;
-    }
-    .composer input{
-      flex:1;padding:12px 14px;border-radius:22px;
-      border:1px solid var(--border);
-      background:#fff;color:var(--text);
-      box-shadow:inset 0 1px 0 rgba(0,0,0,.02);
-    }
-    .composer button{
-      padding:10px 14px;border:none;border-radius:22px;
-      background:var(--wa-accent);color:#fff;
-      font-weight:700;cursor:pointer;
-      box-shadow:0 2px 0 rgba(0,0,0,.06);
+      background:#fff;border:1px solid var(--border);border-radius:999px;padding:8px 12px;
+      font-size:14px;cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.04)
     }
 
-    /* Safe areas iOS */
-    @supports(padding:max(0px)) {
-      .app{padding-bottom: env(safe-area-inset-bottom)}
-    }
+    .composer{display:flex;gap:8px;padding:10px;background:var(--pane);border-top:1px solid var(--border)}
+    .composer input{flex:1;padding:12px 14px;border-radius:22px;border:1px solid var(--border);background:#fff}
+    .composer button{padding:10px 14px;border:none;border-radius:22px;background:var(--wa-accent);color:#fff;font-weight:700;cursor:pointer}
+    pre{white-space:pre-wrap;margin:0;font:inherit}
   </style>
 </head>
 <body>
-<div class="app" role="application" aria-label="Chat HARO">
-  <header>
-    <div class="avatar" aria-hidden="true">
-      <img src="media/logoHARO.png" alt="HARO" />
-    </div>
-    <div class="title">
-      <b>Academia HARO</b>
-      <small>Asistente virtual</small>
-    </div>
-  </header>
+  <div class="app" role="application" aria-label="Chat HARO">
+    <header>
+      <div class="avatar"><img src="media/logoHARO.png" alt="HARO"></div>
+      <div class="title"><b>Academia HARO</b><small>Asistente virtual</small></div>
+    </header>
 
-  <main id="chat" class="chat" aria-live="polite"></main>
-
-  <div class="composer">
-    <input id="input" type="text" placeholder="Escribe un mensaje…" autocomplete="one-time-code" inputmode="text" aria-label="Mensaje" />
-    <button id="sendBtn" aria-label="Enviar">Enviar</button>
+    <main id="chat" class="chat" aria-live="polite"></main>
+    <div id="quickReplies" class="quick"></div>
+    <div class="composer">
+      <input id="userInput" type="text" placeholder="Escribe un mensaje…" autocomplete="off" />
+      <button id="sendBtn">Enviar</button>
+    </div>
   </div>
-</div>
 
-<script>
-/* ==== Utilidades ==== */
-const $ = s => document.querySelector(s);
-const chat = $("#chat");
-const input = $("#input");
-const sendBtn = $("#sendBtn");
-const nowTime = () => new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
-const normalize = (t="") => t.trim().toLowerCase()
-  .normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ");
-
-/* ==== Menús (tu MenuHandler portado a JS) ==== */
-const MENUS = {
-  "inicio": {
-    mensaje:
-`👋 *Academia de Conducción HARO*
-
-Elige una opción (pulsa un botón o escribe el número):
-1️⃣ *Soy nuevo* (información / matrícula)
-2️⃣ *Soy estudiante activo*`,
-    transiciones: {"1":"nuevo","2":"activo"}
-  },
-  "nuevo": {
-    mensaje:
-`🆕 *Nuevo estudiante*
-a) Información de cursos (A2/B1/C1)
-b) Costos y horarios (referencial)
-c) Matricularme
-d) Volver`,
-    transiciones: {"a":"info_cursos","b":"costos","c":"matricula","d":"inicio","*":"nuevo"}
-  },
-  "info_cursos": {
-    mensaje:
-`📚 *Cursos*: A2 (moto), B1/C1 (carro)
-Responde *horarios*, *requisitos* o *volver*.`,
-    transiciones: {"volver":"nuevo","*":"info_cursos"}
-  },
-  "costos": {
-    mensaje:
-`💰 *Costos referenciales*: según categoría y examen médico.
-Escribe *cotizar* para guiarte con tu caso o *volver*.`,
-    transiciones: {"cotizar":"cotizar","volver":"nuevo","*":"costos"}
-  },
-  "cotizar": {
-    mensaje:
-`📄 Para cotizar, indica:
-• *Categoría*: A2/B1/C1
-• ¿Requieres financiación? *si/no*
-Escribe *volver* para regresar.`,
-    transiciones: {"volver":"costos","*":"cotizar"}
-  },
-  "matricula": {
-    mensaje:
-`📝 *Matrícula* — envía:
-• *Nombre completo*
-• *Documento* (solo números)
-Escribe *volver* para regresar.`,
-    transiciones: {"volver":"nuevo","*":"matricula"}
-  },
-  "activo": {
-    mensaje:
-`🎓 *Estudiante activo*
-a) Agendar clase práctica
-b) Programar examen teórico
-c) Certificación y trámites
-🔐 Para ver tu avance, primero *autenticar* (correo + OTP)
-d) Volver`,
-    transiciones: {"a":"agendar_practica","b":"examen_teorico","c":"certificados","d":"inicio","autenticar":"login_estudiante","login":"login_estudiante","*":"activo"}
-  },
-  "agendar_practica": {
-    mensaje:
-`🗓️ *Agendar práctica* — formato exacto:
-• *placa ABC123*
-• *fecha 2025-11-02* (AAAA-MM-DD)
-• *hora 09:00* (24h)
-Ejemplo: *placa ABC123 fecha 2025-11-02 hora 09:00*
-Escribe *volver* para regresar.`,
-    transiciones: {"volver":"activo","*":"agendar_practica"}
-  },
-  "examen_teorico": {
-    mensaje:
-`🧠 *Examen teórico*
-Opciones: *simulador*, *fecha 2025-11-03*, *volver*.`,
-    transiciones: {"volver":"activo","*":"examen_teorico"}
-  },
-  "certificados": {
-    mensaje:
-`📄 *Certificados y trámites*
-Opciones: *estado*, *requisitos*, *volver*.`,
-    transiciones: {"volver":"activo","*":"certificados"}
-  },
-  "politica_activo": {
-    mensaje:
-`🛡️ *Tratamiento de datos*
-Usaremos tus datos para matrícula, agenda y contacto.
-Si estás de acuerdo, escribe: *acepto*
-Para más info: *politica*`,
-    transiciones: {"*":"politica_activo"}
-  },
-  "login_estudiante": {
-    mensaje:
-`🔐 *Autenticación por correo + OTP*
-1) Escribe *correo* y envía tu email
-2) Recibirás un *código OTP*
-3) Escríbelo así: *otp 123456*
-Escribe *volver* para regresar.`,
-    transiciones: {"correo":"login_pedir_email","volver":"activo","*":"login_estudiante"}
-  },
-  "login_pedir_email": {
-    mensaje:
-`📧 Escribe tu *correo electrónico* (ej.: usuario@dominio.com).
-Luego ingresa el *OTP* así: *otp 123456*.`,
-    transiciones: {"volver":"inicio","*":"login_pedir_email"}
-  },
-  "verificar_otp_email": {
-    mensaje:
-`🔐 Ingresa tu *código OTP* así: *otp 123456*.
-Escribe *volver* para reiniciar.`,
-    transiciones: {"volver":"inicio","*":"verificar_otp_email"}
-  },
-};
-
-/* ==== Estado ==== */
-const state = { estado:"inicio", nombre:null, documento:null, correo:null };
-
-/* ==== UI helpers ==== */
-function bubble(text, who="bot"){
-  const wrap = document.createElement("div");
-  wrap.className = `msg ${who}`;
-  const bub = document.createElement("div");
-  bub.className = "bubble";
-  // Convierte *negritas* y saltos de línea
-  bub.innerHTML = text.replace(/\*(.+?)\*/g,"<b>$1</b>").replace(/\n/g,"<br/>");
-  const t = document.createElement("span");
-  t.className = "time";
-  t.textContent = nowTime();
-  bub.appendChild(t);
-  wrap.appendChild(bub);
-  chat.appendChild(wrap);
-  chat.scrollTop = chat.scrollHeight;
-}
-
-function makeChips(keys){
-  const row = document.createElement("div");
-  row.className = "chips";
-  keys.forEach(k=>{
-    const b = document.createElement("button");
-    b.className = "chip";
-    b.textContent = k.label;
-    b.onclick = () => handleUser(k.value);
-    row.appendChild(b);
-  });
-  const wrap = document.createElement("div"); wrap.className="msg bot";
-  const bub = document.createElement("div"); bub.className="bubble";
-  bub.appendChild(row);
-  const t = document.createElement("span"); t.className="time"; t.textContent = nowTime();
-  bub.appendChild(t);
-  wrap.appendChild(bub);
-  chat.appendChild(wrap);
-  chat.scrollTop = chat.scrollHeight;
-}
-
-function chipsForState(estado){
-  const trans = (MENUS[estado]?.transiciones)||{};
-  const keys = Object.keys(trans).filter(k=>k!=="*");
-  const labelMap = {
-    "1":"1️⃣ Soy nuevo", "2":"2️⃣ Estudiante activo",
-    "a":"a) Info cursos", "b":"b) Costos", "c":"c) Matricularme", "d":"⬅️ Volver",
-    "autenticar":"🔐 Autenticar", "login":"🔐 Login",
-    "volver":"⬅️ Volver", "cotizar":"💬 Cotizar",
-    "horarios":"🕒 Horarios", "requisitos":"📋 Requisitos",
-    "simulador":"🧪 Simulador", "estado":"📄 Estado", "politica":"📜 Política",
-    "correo":"📧 Correo"
-  };
-  return keys.map(k=>({label:labelMap[k]||k, value:k}));
-}
-
-function showMenu(estado){
-  const menu = MENUS[estado] || MENUS["inicio"];
-  bubble(menu.mensaje, "bot");
-  const chips = chipsForState(estado);
-  if (chips.length) makeChips(chips);
-}
-
-/* ==== Transición tipo MenuHandler.siguiente ==== */
-function siguiente(estado, entrada){
-  const e = normalize(entrada);
-  const menu = MENUS[estado] || MENUS["inicio"];
-  const trans = menu.transiciones || {};
-  let nuevo = estado;
-  if (e in trans) nuevo = trans[e];
-  else if ("*" in trans) nuevo = trans["*"];
-  if (!(nuevo in MENUS)) return ["", nuevo];
-  const respuesta = MENUS[nuevo].mensaje;
-  return [respuesta, nuevo];
-}
-
-/* ==== Reglas especiales (validaciones demo) ==== */
-const EMAIL_RE=/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/;
-const DATE_RE=/^\d{4}-\d{2}-\d{2}$/;
-const TIME_RE=/^([01]\d|2[0-3]):[0-5]\d$/;
-const PLACA_RE=/^[A-Z]{3}\d{3}$/;
-
-function reglasEspeciales(texto){
-  const e = texto.trim();
-
-  // Matrícula: nombre + documento
-  if (state.estado==="matricula"){
-    const doc = (e.match(/\b(\d{6,})\b/)||[])[1];
-    if (doc) state.documento = doc;
-    if (/[a-zA-ZáéíóúñÁÉÍÓÚÑ]{3,}/.test(e)) state.nombre = (state.nombre || e);
-    if (state.nombre && state.documento){
-      bubble(`✅ Datos registrados (demo):<br><b>Nombre:</b> ${state.nombre}<br><b>Documento:</b> ${state.documento}<br><small>(En producción se envía a la API)</small>`,"bot");
-      state.estado="nuevo"; showMenu(state.estado);
-      return true;
-    }
-  }
-
-  // Login: correo → otp
-  if (state.estado==="login_pedir_email"){
-    if (EMAIL_RE.test(e)){
-      state.correo = e;
-      state.estado = "verificar_otp_email";
-      bubble("📩 Correo recibido. Ahora envía <b>otp 123456</b> (demo).","bot");
-      makeChips([{label:"Enviar OTP 123456", value:"otp 123456"}]);
-      return true;
-    }
-  }
-  if (state.estado==="verificar_otp_email"){
-    if (/^otp\s+\d{4,8}$/i.test(e)){
-      bubble("✅ OTP validado (demo).","bot");
-      state.estado="activo"; showMenu(state.estado);
-      return true;
-    }
-  }
-
-  // Agendar práctica
-  if (state.estado==="agendar_practica"){
-    const placa=(e.match(/placa\s+([A-Za-z]{3}\d{3})/)||[])[1];
-    const fecha=(e.match(/fecha\s+(\d{4}-\d{2}-\d{2})/)||[])[1];
-    const hora =(e.match(/hora\s+([0-2]\d:[0-5]\d)/)||[])[1];
-    if (placa && fecha && hora){
-      if (!PLACA_RE.test(placa.toUpperCase())) { bubble("⚠️ Placa inválida (ABC123).","bot"); return true; }
-      if (!DATE_RE.test(fecha)) { bubble("⚠️ Fecha inválida (AAAA-MM-DD).","bot"); return true; }
-      if (!TIME_RE.test(hora)) { bubble("⚠️ Hora inválida (HH:MM 24h).","bot"); return true; }
-      bubble(`✅ Solicitud enviada (demo):<br>Placa <b>${placa.toUpperCase()}</b> — ${fecha} ${hora}<br><small>(En producción se valida contra disponibilidad)</small>`,"bot");
-      return true;
-    }
-  }
-  return false;
-}
-
-/* ==== Manejo de entrada ==== */
-function handleUser(text){
-  const raw = String(text||"");
-  if (!raw.trim()) return;
-
-  // burbuja del usuario (sin *negritas* para parecer WhatsApp)
-  const wrap = document.createElement("div");
-  wrap.className = "msg user";
-  const bub = document.createElement("div");
-  bub.className = "bubble";
-  bub.textContent = raw;
-  const t = document.createElement("span"); t.className="time"; t.textContent=nowTime();
-  bub.appendChild(t); wrap.appendChild(bub); chat.appendChild(wrap);
-  chat.scrollTop = chat.scrollHeight;
-
-  // comandos globales
-  const e = normalize(raw);
-  if (e==="menu" || e==="volver"){
-    state.estado="inicio"; showMenu(state.estado); return;
-  }
-
-  // reglas del estado
-  if (reglasEspeciales(raw)) return;
-
-  // transición por menú
-  const [respuesta, nuevo] = siguiente(state.estado, raw);
-  if (respuesta==="" && nuevo){ // pseudo-estado
-    state.estado = nuevo;
-    bubble("Continúa según las instrucciones del estado actual.","bot");
-    const chips = chipsForState(state.estado);
-    if (chips.length) makeChips(chips);
-    return;
-  }
-  state.estado = nuevo;
-  bubble(respuesta, "bot");
-  const chips = chipsForState(state.estado);
-  if (chips.length) makeChips(chips);
-}
-
-/* ==== Composer ==== */
-sendBtn.addEventListener("click", ()=>{ const v=input.value; input.value=""; handleUser(v); input.focus(); });
-input.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); sendBtn.click(); }});
-
-/* ==== Inicio ==== */
-showMenu(state.estado);
-</script>
+  <!-- Módulo principal -->
+  <script type="module" src="./js/bot.js"></script>
 </body>
 </html>
