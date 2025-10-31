@@ -12,7 +12,6 @@ from config import settings
 from nlu.llm_client import LLMClient
 
 from services.si_client import SIClient
-from storage import db as dbrepo  # solo para dashboard/QA si no hay API
 
 
 class ChatBotCore:
@@ -110,7 +109,7 @@ class ChatBotCore:
         if self.provider_mode == "api":
             return self.si.get_student_dashboard(id_est)
         else:
-            return dbrepo.student_dashboard(id_est)
+            return 
 
     # ------------- textos -------------
     def _msg_politica(self) -> str:

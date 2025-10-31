@@ -1,15 +1,13 @@
 # core/menu.py
 from typing import Tuple, Dict
 
-
 class MenuHandler:
     def __init__(self):
-        # Definición de menús y estados visibles
         self.menus: Dict[str, Dict] = {
             "inicio": {
                 "mensaje":
-                    "👋 *Bienvenido a la Academia de Conducción*\n\n"
-                    "Elige una opción:\n"
+                    "👋 *Academia de Conducción HARO*\n\n"
+                    "Elige una opción (pulsa un botón o escribe el número):\n"
                     "1️⃣ *Soy nuevo* (información / matrícula)\n"
                     "2️⃣ *Soy estudiante activo*",
                 "transiciones": {"1": "nuevo", "2": "activo"}
@@ -19,8 +17,8 @@ class MenuHandler:
             "nuevo": {
                 "mensaje":
                     "🆕 *Nuevo estudiante*\n"
-                    "a) Información de cursos\n"
-                    "b) Costos y horarios\n"
+                    "a) Información de cursos (A2/B1/C1)\n"
+                    "b) Costos y horarios (referencial)\n"
                     "c) Matricularme\n"
                     "d) Volver",
                 "transiciones": {
@@ -33,26 +31,30 @@ class MenuHandler:
             },
             "info_cursos": {
                 "mensaje":
-                    "📚 Ofrecemos: *B1, C1, C2*.\n"
+                    "📚 *Cursos*: A2 (moto), B1/C1 (carro)\n"
                     "Responde *horarios*, *requisitos* o *volver*.",
                 "transiciones": {"volver": "nuevo", "*": "info_cursos"}
             },
             "costos": {
                 "mensaje":
-                    "💰 Costos aproximados: B1 desde $X, C1 desde $Y.\n"
-                    "Para detalle escribe *cotizar* o *volver*.",
+                    "💰 *Costos referenciales*: según categoría y examen médico.\n"
+                    "Escribe *cotizar* para guiarte con tu caso o *volver*.",
                 "transiciones": {"cotizar": "cotizar", "volver": "nuevo", "*": "costos"}
             },
             "cotizar": {
                 "mensaje":
-                    "📄 Envíame: *clase de licencia (B1/C1/C2)* y si necesitas *financiación*.\n"
-                    "O *volver*.",
+                    "📄 Para cotizar, indica:\n"
+                    "• *Categoría*: A2/B1/C1\n"
+                    "• ¿Requieres financiación? *si/no*\n"
+                    "Escribe *volver* para regresar.",
                 "transiciones": {"volver": "costos", "*": "cotizar"}
             },
             "matricula": {
                 "mensaje":
-                    "📝 Para matrícula necesito tu *nombre completo* y *documento*.\n"
-                    "O escribe *volver*.",
+                    "📝 *Matrícula* — envía:\n"
+                    "• *Nombre completo*\n"
+                    "• *Documento* (solo números)\n"
+                    "Escribe *volver* para regresar.",
                 "transiciones": {"volver": "nuevo", "*": "matricula"}
             },
 
@@ -63,7 +65,7 @@ class MenuHandler:
                     "a) Agendar clase práctica\n"
                     "b) Programar examen teórico\n"
                     "c) Certificación y trámites\n"
-                    "🔐 Escribe *autenticar* para ver tu información\n"
+                    "🔐 Para ver tu avance, primero *autenticar* (correo + OTP)\n"
                     "d) Volver",
                 "transiciones": {
                     "a": "agendar_practica",
@@ -71,73 +73,76 @@ class MenuHandler:
                     "c": "certificados",
                     "d": "inicio",
                     "autenticar": "login_estudiante",
+                    "login": "login_estudiante",
                     "*": "activo"
                 }
             },
             "agendar_practica": {
                 "mensaje":
-                    "🗓️ Para agendar práctica envía: *placa*, *fecha deseada (AAAA-MM-DD)*, *hora*.\n"
-                    "O escribe *volver*.",
+                    "🗓️ *Agendar práctica* — formato exacto:\n"
+                    "• *placa ABC123*\n"
+                    "• *fecha 2025-11-02* (AAAA-MM-DD)\n"
+                    "• *hora 09:00* (24h)\n"
+                    "Ejemplo: *placa ABC123 fecha 2025-11-02 hora 09:00*\n"
+                    "Escribe *volver* para regresar.",
                 "transiciones": {"volver": "activo", "*": "agendar_practica"}
             },
             "examen_teorico": {
                 "mensaje":
-                    "🧠 Para el examen teórico, opciones: *simulador*, *fecha*, *volver*.",
+                    "🧠 *Examen teórico*\n"
+                    "Opciones: *simulador*, *fecha 2025-11-03*, *volver*.",
                 "transiciones": {"volver": "activo", "*": "examen_teorico"}
             },
             "certificados": {
                 "mensaje":
-                    "📄 Certificados y trámites: *estado*, *requisitos*, *volver*.",
+                    "📄 *Certificados y trámites*\n"
+                    "Opciones: *estado*, *requisitos*, *volver*.",
                 "transiciones": {"volver": "activo", "*": "certificados"}
             },
 
-            # ----- CONSENTIMIENTO + LOGIN -----
+            # ----- CONSENTIMIENTO + LOGIN (correo/OTP) -----
             "politica_activo": {
                 "mensaje":
                     "🛡️ *Tratamiento de datos*\n"
-                    "Usaremos tus datos para matrícula, agendamiento y contacto, conforme a la normatividad vigente.\n"
-                    "Si estás de acuerdo, responde: *acepto*\n"
-                    "Para más info escribe: *politica*",
-                "transiciones": {
-                    # el bot maneja 'acepto' y luego envía a login_estudiante
-                    "*": "politica_activo"
-                }
+                    "Usaremos tus datos para matrícula, agenda y contacto.\n"
+                    "Si estás de acuerdo, escribe: *acepto*\n"
+                    "Para más info: *politica*",
+                "transiciones": {"*": "politica_activo"}
             },
             "login_estudiante": {
                 "mensaje":
-                    "🔐 *Verificación de identidad*\n"
-                    "Por favor escribe tu número de *cédula* así:\n"
-                    "• *1094XXXXXX*  (sin espacios ni puntos).\n"
+                    "🔐 *Autenticación por correo + OTP*\n"
+                    "1) Escribe *correo* y envía tu email\n"
+                    "2) Recibirás un *código OTP*\n"
+                    "3) Escríbelo así: *otp 123456*\n"
                     "Escribe *volver* para regresar.",
                 "transiciones": {
+                    "correo": "login_pedir_email",
                     "volver": "activo",
-                    "*": "login_estudiante"  # permanece hasta que envíe el doc
+                    "*": "login_estudiante"
                 }
             },
 
-            # ----- PSEUDO-ESTADOS (internos) para evitar KeyError -----
-            # Se usan cuando el flujo ya no pasa por menú sino por lógica del bot.
+            # ----- PSEUDO-ESTADOS (internos, definidos para evitar KeyError) -----
             "login_pedir_email": {
-                "mensaje": "📧 Por favor escribe tu correo electrónico (ej.: usuario@dominio.com).",
-                "transiciones": {
-                    "volver": "inicio",
-                    "*": "login_pedir_email"
-                }
+                "mensaje":
+                    "📧 Escribe tu *correo electrónico* (ej.: usuario@dominio.com).\n"
+                    "Luego ingresa el *OTP* así: *otp 123456*.",
+                "transiciones": {"volver": "inicio", "*": "login_pedir_email"}
             },
             "verificar_otp_email": {
-                "mensaje": "🔐 Ingresa tu código OTP así: *otp 123456*.",
-                "transiciones": {
-                    "volver": "inicio",
-                    "*": "verificar_otp_email"
-                }
+                "mensaje":
+                    "🔐 Ingresa tu *código OTP* así: *otp 123456*.\n"
+                    "Escribe *volver* para reiniciar.",
+                "transiciones": {"volver": "inicio", "*": "verificar_otp_email"}
             },
         }
 
     def siguiente(self, estado: str, entrada: str) -> Tuple[str, str]:
         """
-        Dado un estado actual y una entrada de usuario, retorna (mensaje, nuevo_estado).
-        Si el nuevo estado no está definido como menú (p. ej., estados internos de login),
-        retorna ("", nuevo_estado) para que la lógica del bot lo maneje.
+        Dado estado actual y entrada, retorna (mensaje, nuevo_estado).
+        Si 'nuevo' no existe en menús (estado interno), retorna ('', nuevo) para que
+        el core lo maneje sin romper.
         """
         estado = (estado or "inicio")
         entrada_normalizada = (entrada or "").strip().lower()
@@ -152,13 +157,11 @@ class MenuHandler:
         else:
             nuevo = estado
 
-        # Si el nuevo estado no tiene menú (estado interno manejado por el bot), evita KeyError
         if nuevo not in self.menus:
             return ("", nuevo)
 
         respuesta = self.menus[nuevo]["mensaje"]
 
-        # Mensaje de "opción no válida" solo cuando el estado define transiciones explícitas sin comodín
         if entrada_normalizada not in trans and "*" not in trans:
             respuesta = f"⚠️ Opción no válida.\n\n{respuesta}"
 
