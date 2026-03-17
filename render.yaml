@@ -33,6 +33,14 @@ services:
         value: /var/data/monitor_events.db
       - key: MONITOR_TOKEN
         generateValue: true
+      - key: MONITOR_USERNAME
+        sync: false
+      - key: MONITOR_PASSWORD
+        sync: false
+      - key: APP_SESSION_SECRET
+        generateValue: true
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
       - key: MONITOR_LOG_MAX
         value: "0"
       - key: WEBHOOK_JOB_HISTORY_LIMIT
@@ -41,6 +49,22 @@ services:
         value: "10"
       - key: SPRING_BASE_URL
         value: https://harorepositoty2-590358146556.europe-west1.run.app/
+      - key: SPRING_AUTH_URL
+        value: https://harorepositoty2-590358146556.europe-west1.run.app/api/auth/login
+      - key: SPRING_AUTH_BODY_JSON
+        sync: false
+      - key: SPRING_AUTH_TOKEN_JSON_PATH
+        value: token
+      - key: MONITOR_AUTH_USERNAME_FIELD
+        value: email
+      - key: MONITOR_AUTH_PASSWORD_FIELD
+        value: password
+      - key: MONITOR_AUTH_EXTRA_BODY_JSON
+        sync: false
+      - key: SPRING_AUTH_HEADER_NAME
+        value: Authorization
+      - key: SPRING_AUTH_HEADER_PREFIX
+        value: "Bearer "
       - key: CHATBOT_ENROLLMENT_WELCOME_IMAGE_URL
         value: https://haro-files.s3.us-east-2.amazonaws.com/clases/clase-1/imagen/2026/03/saludo-bot.jpeg
       - key: CHATBOT_ENROLLMENT_WELCOME_IMAGE_CAPTION
