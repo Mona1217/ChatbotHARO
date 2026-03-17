@@ -1613,7 +1613,9 @@ requeue_pending_webhook_jobs()
 # ========= Routes =========
 @app.get("/")
 def home():
-    return "OK - Flask arriba. Prueba /health o /webhook", 200
+    if MONITOR_TOKEN:
+        return "Monitor protegido. Abre /monitor?token=TU_MONITOR_TOKEN", 200
+    return redirect(url_for("monitor_dashboard"))
 
 
 @app.get("/health")
