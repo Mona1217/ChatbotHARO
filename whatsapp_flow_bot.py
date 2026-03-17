@@ -99,6 +99,7 @@ MONITOR_CORS_PATHS = {
     "/monitor/export/contacts.xlsx",
     "/api/monitor/export/contacts.xlsx",
 }
+SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "").strip().lower() in {"1", "true", "yes", "y"}
 
 try:
     # 0 o negativo => historial sin limite en memoria.
@@ -157,6 +158,7 @@ APP_SESSION_SECRET = (
 app.secret_key = APP_SESSION_SECRET
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = SESSION_COOKIE_SECURE
 
 
 # ========= Session State (solo si usas lógica local; puedes quitarlo si TODO vive en Spring) =========
@@ -885,11 +887,34 @@ def redirect_to_monitor_login():
     return redirect(url_for("monitor_login", next=request.full_path if request.query_string else request.path))
 
 
+def is_safe_local_redirect_target(target: str) -> bool:
+    cleaned = clean_text_value(target)
+    if not cleaned:
+        return False
+
+    target_parts = urlparse(cleaned)
+    if target_parts.scheme or target_parts.netloc:
+        return False
+    if not cleaned.startswith("/"):
+        return False
+    return True
+
+
+def resolve_monitor_next_url(raw_target: Optional[str]) -> str:
+    cleaned = clean_text_value(raw_target)
+    if is_safe_local_redirect_target(cleaned):
+        return cleaned
+    return url_for("monitor_dashboard")
+
+
 def is_monitor_authorized() -> bool:
     if has_monitor_session():
         return True
 
-    if not MONITOR_TOKEN and not is_monitor_login_enabled():
+    if is_monitor_login_enabled():
+        return False
+
+    if not MONITOR_TOKEN:
         return True
 
     token = (
@@ -1757,7 +1782,7 @@ requeue_pending_webhook_jobs()
 def home():
     if is_monitor_login_enabled() and not has_monitor_session():
         return redirect(url_for("monitor_login"))
-    if MONITOR_TOKEN:
+    if MONITOR_TOKEN and not is_monitor_login_enabled():
         return "Monitor protegido. Abre /monitor?token=TU_MONITOR_TOKEN", 200
     return redirect(url_for("monitor_dashboard"))
 
@@ -1771,7 +1796,7 @@ def monitor_login():
         return redirect(url_for("monitor_dashboard"))
 
     error_message = ""
-    next_url = request.args.get("next") or request.form.get("next") or url_for("monitor_dashboard")
+    next_url = resolve_monitor_next_url(request.args.get("next") or request.form.get("next"))
 
     if request.method == "POST":
         username = request.form.get("username", "")

@@ -39,6 +39,8 @@ services:
         sync: false
       - key: APP_SESSION_SECRET
         generateValue: true
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
       - key: MONITOR_LOG_MAX
         value: "0"
       - key: WEBHOOK_JOB_HISTORY_LIMIT
