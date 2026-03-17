@@ -33,6 +33,8 @@ services:
         generateValue: true
       - key: MONITOR_LOG_MAX
         value: "0"
+      - key: WEBHOOK_JOB_HISTORY_LIMIT
+        value: "1000"
       - key: SESSION_TIMEOUT_MINUTES
         value: "10"
       - key: SPRING_BASE_URL
