@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+.git/
+.gitignore
+.env
+.venv/
+venv/
+monitor_events.db

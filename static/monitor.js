@@ -13,6 +13,10 @@
   }
 
   const token = readTemplateSafe(body.dataset.token) || query.get("token") || "";
+  const providedEventsUrl = readTemplateSafe(body.dataset.eventsUrl) || "";
+  const providedPauseUrl = readTemplateSafe(body.dataset.pauseUrl) || "";
+  const providedStreamUrl = readTemplateSafe(body.dataset.streamUrl) || "";
+  const providedExportUrl = readTemplateSafe(body.dataset.exportUrl) || "";
   const explicitApiBaseRaw = readTemplateSafe(query.get("api_base")) || readTemplateSafe(query.get("api")) || "";
   const explicitApiBase = explicitApiBaseRaw.replace(/\/+$/, "");
   const pollInput = readTemplateSafe(body.dataset.pollSeconds) || query.get("poll") || "5";
@@ -29,6 +33,7 @@
   const contactCount = document.getElementById("contactCount");
   const lastUpdate = document.getElementById("lastUpdate");
   const statusBadge = document.getElementById("botStatus");
+  const exportBtn = document.getElementById("exportNumbersBtn");
   const toggleBtn = document.getElementById("togglePauseBtn");
   const refreshBtn = document.getElementById("refreshBtn");
   const activeContact = document.getElementById("activeContact");
@@ -54,6 +59,26 @@
     return `${url}${sep}token=${encodeURIComponent(token)}`;
   }
 
+  function getProvidedUrl(kind) {
+    if (kind === "events") {
+      return providedEventsUrl;
+    }
+    if (kind === "pause") {
+      return providedPauseUrl;
+    }
+    if (kind === "stream") {
+      return providedStreamUrl;
+    }
+    if (kind === "export") {
+      return providedExportUrl;
+    }
+    return "";
+  }
+
+  function isLocalDevelopmentHost(hostname) {
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+  }
+
   function getApiBaseCandidates() {
     const candidates = [];
     const seen = new Set();
@@ -74,12 +99,15 @@
       add(explicitApiBase);
     }
 
-    if (!explicitApiBase && protocol.startsWith("http") && hostname && port !== "8000") {
+    if (!explicitApiBase && protocol.startsWith("http") && hostname && port && port !== "8000" && isLocalDevelopmentHost(hostname)) {
       add(`${protocol}//${hostname}:8000`);
     }
 
-    add("http://127.0.0.1:8000");
-    add("http://localhost:8000");
+    if (!explicitApiBase && (protocol === "file:" || isLocalDevelopmentHost(hostname))) {
+      add("http://127.0.0.1:8000");
+      add("http://localhost:8000");
+    }
+
     add("");
 
     return candidates;
@@ -89,6 +117,8 @@
     const candidates = [];
     const seen = new Set();
     const path = window.location.pathname.replace(/\/+$/, "");
+    const directMonitorPath = kind === "export" ? "/monitor/export/contacts.xlsx" : `/monitor/${kind}`;
+    const directApiPath = kind === "export" ? "/api/monitor/export/contacts.xlsx" : `/api/monitor/${kind}`;
 
     function add(rawPath) {
       const normalized = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
@@ -99,19 +129,19 @@
       candidates.push(normalized);
     }
 
-    add(`/monitor/${kind}`);
-    add(`/api/monitor/${kind}`);
+    add(directMonitorPath);
+    add(directApiPath);
 
     if (path.endsWith("/monitor")) {
       const base = path.slice(0, -"/monitor".length);
-      add(`${base}/monitor/${kind}`);
-      add(`${base}/api/monitor/${kind}`);
+      add(`${base}${directMonitorPath}`);
+      add(`${base}${directApiPath}`);
     }
 
     if (path.endsWith("/static/monitor.html")) {
       const base = path.slice(0, -"/static/monitor.html".length);
-      add(`${base}/monitor/${kind}`);
-      add(`${base}/api/monitor/${kind}`);
+      add(`${base}${directMonitorPath}`);
+      add(`${base}${directApiPath}`);
     }
 
     return candidates;
@@ -122,6 +152,13 @@
     const paths = getEndpointCandidates(kind);
     const urls = [];
     const seen = new Set();
+    const providedUrl = getProvidedUrl(kind);
+
+    if (providedUrl) {
+      const directUrl = withToken(providedUrl);
+      seen.add(directUrl);
+      urls.push(directUrl);
+    }
 
     for (const base of bases) {
       for (const path of paths) {
@@ -172,6 +209,9 @@
     if (!eventsUrl) {
       return "";
     }
+    if (eventsUrl.includes("/api/monitor/stream") || eventsUrl.includes("/monitor/stream")) {
+      return eventsUrl;
+    }
     if (eventsUrl.includes("/api/monitor/events")) {
       return eventsUrl.replace("/api/monitor/events", "/api/monitor/stream");
     }
@@ -206,7 +246,6 @@
   function connectStream(preferredEventsUrl = "") {
     stopStream();
 
-    const eventUrls = composeCandidateUrls("events");
     const streamUrls = [];
     const seen = new Set();
 
@@ -214,19 +253,21 @@
       if (!url) {
         return;
       }
-      const streamUrl = toStreamUrl(url);
-      if (!streamUrl || seen.has(streamUrl)) {
+      if (seen.has(url)) {
         return;
       }
-      seen.add(streamUrl);
-      streamUrls.push(streamUrl);
+      seen.add(url);
+      streamUrls.push(url);
     }
 
-    if (preferredEventsUrl) {
-      addStream(preferredEventsUrl);
-    }
-    for (const url of eventUrls) {
+    for (const url of composeCandidateUrls("stream")) {
       addStream(url);
+    }
+    if (preferredEventsUrl) {
+      addStream(toStreamUrl(preferredEventsUrl));
+    }
+    for (const url of composeCandidateUrls("events")) {
+      addStream(toStreamUrl(url));
     }
 
     if (streamUrls.length === 0) {
@@ -637,6 +678,17 @@
     }
   }
 
+  function downloadContactsExcel() {
+    const urls = composeCandidateUrls("export");
+    if (!urls.length) {
+      showError("No encontre una ruta de exportacion disponible.");
+      return;
+    }
+
+    hideError();
+    window.location.assign(urls[0]);
+  }
+
   contactsList.addEventListener("click", (event) => {
     const item = event.target.closest(".contact-item");
     if (!item) {
@@ -648,6 +700,9 @@
     loadPeerConversation(state.selectedPeer, { force: false, silent: true }).catch(() => {});
   });
 
+  if (exportBtn) {
+    exportBtn.addEventListener("click", downloadContactsExcel);
+  }
   toggleBtn.addEventListener("click", togglePause);
   refreshBtn.addEventListener("click", () => loadEvents());
   window.addEventListener("beforeunload", stopStream);

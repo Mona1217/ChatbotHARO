@@ -7,10 +7,39 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Sora:wght@500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../static/monitor.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='monitor.css') }}" />
 </head>
-<body data-token="{{ token }}" data-poll-seconds="{{ poll_seconds }}">
+<body
+  data-token="{{ token }}"
+  data-poll-seconds="{{ poll_seconds }}"
+  data-events-url="{{ events_url }}"
+  data-pause-url="{{ pause_url }}"
+  data-stream-url="{{ stream_url }}"
+  data-export-url="{{ export_url }}"
+>
   <main class="dashboard">
+    <header class="monitor-toolbar">
+      <div class="toolbar-copy">
+        <p class="toolbar-eyebrow">Monitor del bot</p>
+        <h1>Conversaciones en tiempo real</h1>
+      </div>
+      <div class="toolbar-metrics">
+        <span id="botStatus" class="chip chip-live">ACTIVO</span>
+        <div class="metric-card">
+          <span class="metric-label">Eventos</span>
+          <strong id="eventCount">0</strong>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Chats</span>
+          <strong id="contactCount">0</strong>
+        </div>
+        <span id="lastUpdate" class="metric-stamp">Sin actualizar</span>
+        <button id="exportNumbersBtn" class="btn btn-soft" type="button">Exportar Excel</button>
+        <button id="refreshBtn" class="btn btn-soft" type="button">Refrescar</button>
+        <button id="togglePauseBtn" class="btn btn-danger" type="button">Pausar bot</button>
+      </div>
+    </header>
+
     <section class="workspace">
       <aside class="contacts-panel">
         <div class="panel-title-row">
@@ -34,16 +63,6 @@
       </section>
     </section>
   </main>
-
-  <div class="metrics-ghost" aria-hidden="true">
-    <span id="botStatus" class="chip chip-live">ACTIVO</span>
-    <button id="togglePauseBtn" class="btn btn-danger" type="button">Pausar bot</button>
-    <button id="refreshBtn" class="btn btn-soft" type="button">Refrescar</button>
-    <span id="eventCount">0</span>
-    <span id="contactCount">0</span>
-    <span id="lastUpdate">-</span>
-  </div>
-
-  <script src="../static/monitor.js"></script>
+  <script src="{{ url_for('static', filename='monitor.js') }}"></script>
 </body>
 </html>

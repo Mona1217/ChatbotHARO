@@ -1,0 +1,47 @@
+services:
+  - type: web
+    name: whatsapp-flow-bot
+    plan: starter
+    region: oregon
+    runtime: docker
+    autoDeployTrigger: commit
+    healthCheckPath: /health
+    numInstances: 1
+    maxShutdownDelaySeconds: 60
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    disk:
+      name: monitor-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: WHATSAPP_API_VERSION
+        value: v24.0
+      - key: MONITOR_DB_PATH
+        value: /var/data/monitor_events.db
+      - key: MONITOR_TOKEN
+        generateValue: true
+      - key: MONITOR_LOG_MAX
+        value: "0"
+      - key: SESSION_TIMEOUT_MINUTES
+        value: "10"
+      - key: SPRING_BASE_URL
+        value: https://harorepositoty2-590358146556.europe-west1.run.app/
+      - key: CHATBOT_ENROLLMENT_WELCOME_IMAGE_URL
+        value: https://haro-files.s3.us-east-2.amazonaws.com/clases/clase-1/imagen/2026/03/saludo-bot.jpeg
+      - key: CHATBOT_ENROLLMENT_WELCOME_IMAGE_CAPTION
+        value: ""
+      - key: USE_WELCOME_TEMPLATE
+        value: "false"
+      - key: BOT_PAUSED
+        value: "false"
