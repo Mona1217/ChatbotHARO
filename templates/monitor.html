@@ -37,6 +37,11 @@
         <button id="exportNumbersBtn" class="btn btn-soft" type="button">Exportar Excel</button>
         <button id="refreshBtn" class="btn btn-soft" type="button">Refrescar</button>
         <button id="togglePauseBtn" class="btn btn-danger" type="button">Pausar bot</button>
+        {% if monitor_login_enabled %}
+        <form action="{{ url_for('monitor_logout') }}" method="post" class="toolbar-form">
+          <button class="btn btn-soft" type="submit">Cerrar sesion</button>
+        </form>
+        {% endif %}
       </div>
     </header>
 

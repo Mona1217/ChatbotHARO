@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 
 import requests
 from dotenv import load_dotenv
-from flask import Flask, Response, jsonify, redirect, render_template, request, send_file, url_for
+from flask import Flask, Response, jsonify, redirect, render_template, request, send_file, session, url_for
 
 load_dotenv()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -74,6 +74,8 @@ BOT_PAUSED_MESSAGE = os.getenv(
 )
 BOT_PAUSED = os.getenv("BOT_PAUSED", "false").strip().lower() in {"1", "true", "yes", "y"}
 MONITOR_TOKEN = os.getenv("MONITOR_TOKEN", "").strip()
+MONITOR_USERNAME = os.getenv("MONITOR_USERNAME", "").strip()
+MONITOR_PASSWORD = os.getenv("MONITOR_PASSWORD", "").strip()
 MONITOR_REFRESH_SECONDS = 5
 MONITOR_DB_PATH = resolve_app_path(os.getenv("MONITOR_DB_PATH", ""), "monitor_events.db")
 MONITOR_CORS_ORIGINS = {
@@ -130,11 +132,31 @@ SPRING_BASE_URL = os.getenv(
     "SPRING_BASE_URL",
     "https://harorepositoty2-590358146556.europe-west1.run.app/",
 ).rstrip("/")
+SPRING_AUTH_URL = os.getenv(
+    "SPRING_AUTH_URL",
+    f"{SPRING_BASE_URL}/api/auth/login",
+).strip()
+SPRING_AUTH_BODY_JSON = os.getenv("SPRING_AUTH_BODY_JSON", "").strip()
+SPRING_AUTH_TOKEN_JSON_PATH = os.getenv("SPRING_AUTH_TOKEN_JSON_PATH", "token").strip() or "token"
+SPRING_AUTH_HEADER_NAME = os.getenv("SPRING_AUTH_HEADER_NAME", "Authorization").strip() or "Authorization"
+SPRING_AUTH_HEADER_PREFIX = os.getenv("SPRING_AUTH_HEADER_PREFIX", "Bearer ")
 
 # ✅ Deduplicación para evitar reintentos duplicados
 PROCESSED_MSG_IDS: set[str] = set()
 MAX_PROCESSED_CACHE = 5000
 SESSION_TIMEOUT = timedelta(minutes=SESSION_TIMEOUT_MINUTES)
+SPRING_AUTH_TOKEN = ""
+SPRING_AUTH_LOCK = Lock()
+APP_SESSION_SECRET = (
+    os.getenv("APP_SESSION_SECRET", "").strip()
+    or os.getenv("SECRET_KEY", "").strip()
+    or MONITOR_TOKEN
+    or WHATSAPP_VERIFY_TOKEN
+    or "chatbotharo-dev-secret"
+)
+app.secret_key = APP_SESSION_SECRET
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 
 # ========= Session State (solo si usas lógica local; puedes quitarlo si TODO vive en Spring) =========
@@ -842,9 +864,34 @@ def parse_incoming_webhook_request(source_label: str) -> Tuple[Optional[dict], O
     return payload, None, signature_reason
 
 
+def is_monitor_login_enabled() -> bool:
+    return bool(MONITOR_USERNAME and MONITOR_PASSWORD)
+
+
+def has_monitor_session() -> bool:
+    return bool(session.get("monitor_auth"))
+
+
+def is_valid_monitor_credentials(username: str, password: str) -> bool:
+    if not is_monitor_login_enabled():
+        return False
+    return hmac.compare_digest(clean_text_value(username), MONITOR_USERNAME) and hmac.compare_digest(
+        clean_text_value(password),
+        MONITOR_PASSWORD,
+    )
+
+
+def redirect_to_monitor_login():
+    return redirect(url_for("monitor_login", next=request.full_path if request.query_string else request.path))
+
+
 def is_monitor_authorized() -> bool:
-    if not MONITOR_TOKEN:
+    if has_monitor_session():
         return True
+
+    if not MONITOR_TOKEN and not is_monitor_login_enabled():
+        return True
+
     token = (
         request.args.get("token")
         or request.form.get("token")
@@ -1040,6 +1087,95 @@ def send_whatsapp_interactive(to_phone: str, interactive: dict) -> None:
         logger.exception("EXCEPTION sending interactive to=%s err=%s", to_phone, e)
 
 # ========= Spring connector =========
+def is_spring_auth_enabled() -> bool:
+    return bool(SPRING_AUTH_BODY_JSON)
+
+
+def clear_spring_auth_token() -> None:
+    global SPRING_AUTH_TOKEN
+    with SPRING_AUTH_LOCK:
+        SPRING_AUTH_TOKEN = ""
+
+
+def load_spring_auth_body() -> Optional[dict]:
+    if not SPRING_AUTH_BODY_JSON:
+        return None
+    try:
+        parsed = json.loads(SPRING_AUTH_BODY_JSON)
+    except json.JSONDecodeError as exc:
+        logger.error("SPRING AUTH BODY JSON invalido: %s", exc)
+        return None
+    if not isinstance(parsed, dict):
+        logger.error("SPRING AUTH BODY JSON debe ser un objeto JSON")
+        return None
+    return parsed
+
+
+def extract_json_path_value(payload: object, path: str) -> Optional[object]:
+    current = payload
+    for segment in [part for part in clean_text_value(path).split(".") if part]:
+        if not isinstance(current, dict):
+            return None
+        current = current.get(segment)
+    return current
+
+
+def fetch_spring_auth_token(force_refresh: bool = False) -> Optional[str]:
+    global SPRING_AUTH_TOKEN
+
+    if not is_spring_auth_enabled():
+        return None
+
+    with SPRING_AUTH_LOCK:
+        if SPRING_AUTH_TOKEN and not force_refresh:
+            return SPRING_AUTH_TOKEN
+
+        auth_body = load_spring_auth_body()
+        if not auth_body:
+            return None
+
+        try:
+            response = requests.post(
+                SPRING_AUTH_URL,
+                json=auth_body,
+                timeout=10,
+            )
+        except Exception as exc:
+            logger.exception("SPRING AUTH EXCEPTION: %s", exc)
+            return None
+
+        if response.status_code >= 300:
+            logger.error("SPRING AUTH ERROR %s - %s", response.status_code, response.text)
+            return None
+
+        try:
+            data = response.json() if response.content else {}
+        except Exception as exc:
+            logger.exception("SPRING AUTH JSON invalido: %s", exc)
+            return None
+
+        token_value = clean_text_value(extract_json_path_value(data, SPRING_AUTH_TOKEN_JSON_PATH))
+        if not token_value:
+            logger.error("SPRING AUTH sin token usable en path=%s", SPRING_AUTH_TOKEN_JSON_PATH)
+            return None
+
+        SPRING_AUTH_TOKEN = token_value
+        return SPRING_AUTH_TOKEN
+
+
+def build_spring_request_headers(force_refresh: bool = False) -> dict:
+    headers = {"Content-Type": "application/json"}
+    if not is_spring_auth_enabled():
+        return headers
+
+    token_value = fetch_spring_auth_token(force_refresh=force_refresh)
+    if not token_value:
+        return headers
+
+    headers[SPRING_AUTH_HEADER_NAME] = f"{SPRING_AUTH_HEADER_PREFIX}{token_value}"
+    return headers
+
+
 def call_spring(
     sender: str,
     text: str,
@@ -1064,7 +1200,13 @@ def call_spring(
     }
 
     try:
-        r = requests.post(url, json=payload, timeout=10)
+        headers = build_spring_request_headers()
+        r = requests.post(url, json=payload, headers=headers, timeout=10)
+        if r.status_code in {401, 403} and is_spring_auth_enabled():
+            clear_spring_auth_token()
+            headers = build_spring_request_headers(force_refresh=True)
+            r = requests.post(url, json=payload, headers=headers, timeout=10)
+
         if r.status_code >= 300:
             logger.error("SPRING ERROR %s - %s", r.status_code, r.text)
             add_monitor_event(
@@ -1613,8 +1755,40 @@ requeue_pending_webhook_jobs()
 # ========= Routes =========
 @app.get("/")
 def home():
+    if is_monitor_login_enabled() and not has_monitor_session():
+        return redirect(url_for("monitor_login"))
     if MONITOR_TOKEN:
         return "Monitor protegido. Abre /monitor?token=TU_MONITOR_TOKEN", 200
+    return redirect(url_for("monitor_dashboard"))
+
+
+@app.route("/login", methods=["GET", "POST"])
+def monitor_login():
+    if not is_monitor_login_enabled():
+        return redirect(url_for("monitor_dashboard"))
+
+    if has_monitor_session():
+        return redirect(url_for("monitor_dashboard"))
+
+    error_message = ""
+    next_url = request.args.get("next") or request.form.get("next") or url_for("monitor_dashboard")
+
+    if request.method == "POST":
+        username = request.form.get("username", "")
+        password = request.form.get("password", "")
+        if is_valid_monitor_credentials(username, password):
+            session["monitor_auth"] = True
+            return redirect(next_url)
+        error_message = "Credenciales invalidas."
+
+    return render_template("login.html", error_message=error_message, next_url=next_url)
+
+
+@app.post("/logout")
+def monitor_logout():
+    session.pop("monitor_auth", None)
+    if is_monitor_login_enabled():
+        return redirect(url_for("monitor_login"))
     return redirect(url_for("monitor_dashboard"))
 
 
@@ -1628,6 +1802,12 @@ def verify_webhook():
     mode = request.args.get("hub.mode")
     token = request.args.get("hub.verify_token")
     challenge = request.args.get("hub.challenge")
+
+    if not mode and not token and not challenge:
+        return (
+            "Webhook activo. Este endpoint espera hub.mode, hub.verify_token y hub.challenge desde Meta.",
+            200,
+        )
 
     if mode == "subscribe" and token == WHATSAPP_VERIFY_TOKEN:
         return challenge or "", 200
@@ -1729,6 +1909,8 @@ def monitor_stream():
 @app.get("/monitor")
 def monitor_dashboard():
     if not is_monitor_authorized():
+        if is_monitor_login_enabled():
+            return redirect_to_monitor_login()
         return "unauthorized", 401
 
     token = request.args.get("token", "")
@@ -1740,6 +1922,7 @@ def monitor_dashboard():
         pause_url=url_for("monitor_pause"),
         stream_url=url_for("monitor_stream"),
         export_url=url_for("monitor_export_contacts"),
+        monitor_login_enabled=is_monitor_login_enabled(),
     )
 
 
