@@ -10,6 +10,8 @@ services:
     maxShutdownDelaySeconds: 60
     dockerfilePath: ./Dockerfile
     dockerContext: .
+    previews:
+      generation: manual
     disk:
       name: monitor-data
       mountPath: /var/data
