@@ -55,6 +55,12 @@ services:
         sync: false
       - key: SPRING_AUTH_TOKEN_JSON_PATH
         value: token
+      - key: MONITOR_AUTH_USERNAME_FIELD
+        value: email
+      - key: MONITOR_AUTH_PASSWORD_FIELD
+        value: password
+      - key: MONITOR_AUTH_EXTRA_BODY_JSON
+        sync: false
       - key: SPRING_AUTH_HEADER_NAME
         value: Authorization
       - key: SPRING_AUTH_HEADER_PREFIX

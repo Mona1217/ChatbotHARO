@@ -49,6 +49,9 @@ MONITOR_TOKEN=un_token_para_proteger_monitor
 MONITOR_USERNAME=admin
 MONITOR_PASSWORD=cambia_esta_contrasena
 APP_SESSION_SECRET=una_clave_larga_y_privada
+MONITOR_AUTH_USERNAME_FIELD=email
+MONITOR_AUTH_PASSWORD_FIELD=password
+MONITOR_AUTH_EXTRA_BODY_JSON={}
 MONITOR_LOG_MAX=0
 WEBHOOK_JOB_HISTORY_LIMIT=1000
 MONITOR_DB_PATH=monitor_events.db
@@ -64,7 +67,8 @@ Notas:
 - `WEBHOOK_JOB_HISTORY_LIMIT=1000` conserva una ventana de jobs del webhook ya procesados para que la cola persistente no crezca sin limite.
 - `MONITOR_DB_PATH` persiste eventos para conservar conversaciones por usuario tras reinicios. Si dejas una ruta relativa, ahora se resuelve contra la carpeta del proyecto.
 - `WHATSAPP_APP_SECRET` permite validar la firma `X-Hub-Signature-256` de Meta. Si la defines, el webhook rechazara payloads no firmados o alterados.
-- Si defines `MONITOR_USERNAME` y `MONITOR_PASSWORD`, la pagina del monitor mostrara un login visual antes de entrar.
+- Si defines `MONITOR_USERNAME` y `MONITOR_PASSWORD`, la pagina del monitor usara esas credenciales fijas para entrar.
+- Si no defines esas dos variables, `/login` validara contra `SPRING_AUTH_URL` usando los campos `MONITOR_AUTH_USERNAME_FIELD` y `MONITOR_AUTH_PASSWORD_FIELD`.
 - `APP_SESSION_SECRET` protege la sesion del login del monitor.
 - Si tu backend Spring requiere login previo, define `SPRING_AUTH_BODY_JSON` con el body JSON del `POST /api/auth/login`.
 - `SPRING_AUTH_TOKEN_JSON_PATH` indica en que campo viene el token. Ejemplos: `token`, `accessToken`, `data.token`.
@@ -105,7 +109,8 @@ Deploy en Render:
 4. La base del monitor queda persistente en Render usando `MONITOR_DB_PATH=/var/data/monitor_events.db`, asi que no se pierden chats ni la exportacion de Excel al reiniciar o redesplegar.
 5. El blueprint tambien genera automaticamente `MONITOR_TOKEN` para proteger el panel y la exportacion.
    Lo encuentras en la seccion `Environment` del servicio ya desplegado.
-   Si prefieres una pantalla de login, configura tambien `MONITOR_USERNAME` y `MONITOR_PASSWORD`.
+   Si prefieres credenciales fijas del monitor, configura tambien `MONITOR_USERNAME` y `MONITOR_PASSWORD`.
+   Si no, el login del monitor usara tu `SPRING_AUTH_URL` y la cuenta real del sistema.
 6. Completa en Render las variables secretas obligatorias:
    - `WHATSAPP_VERIFY_TOKEN`
    - `WHATSAPP_ACCESS_TOKEN`

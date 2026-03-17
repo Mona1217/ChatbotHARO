@@ -141,6 +141,9 @@ SPRING_AUTH_BODY_JSON = os.getenv("SPRING_AUTH_BODY_JSON", "").strip()
 SPRING_AUTH_TOKEN_JSON_PATH = os.getenv("SPRING_AUTH_TOKEN_JSON_PATH", "token").strip() or "token"
 SPRING_AUTH_HEADER_NAME = os.getenv("SPRING_AUTH_HEADER_NAME", "Authorization").strip() or "Authorization"
 SPRING_AUTH_HEADER_PREFIX = os.getenv("SPRING_AUTH_HEADER_PREFIX", "Bearer ")
+MONITOR_AUTH_USERNAME_FIELD = os.getenv("MONITOR_AUTH_USERNAME_FIELD", "email").strip() or "email"
+MONITOR_AUTH_PASSWORD_FIELD = os.getenv("MONITOR_AUTH_PASSWORD_FIELD", "password").strip() or "password"
+MONITOR_AUTH_EXTRA_BODY_JSON = os.getenv("MONITOR_AUTH_EXTRA_BODY_JSON", "").strip()
 
 # ✅ Deduplicación para evitar reintentos duplicados
 PROCESSED_MSG_IDS: set[str] = set()
@@ -866,21 +869,88 @@ def parse_incoming_webhook_request(source_label: str) -> Tuple[Optional[dict], O
     return payload, None, signature_reason
 
 
-def is_monitor_login_enabled() -> bool:
+def is_monitor_static_login_enabled() -> bool:
     return bool(MONITOR_USERNAME and MONITOR_PASSWORD)
+
+
+def is_monitor_spring_login_enabled() -> bool:
+    return (not is_monitor_static_login_enabled()) and bool(clean_text_value(SPRING_AUTH_URL))
+
+
+def is_monitor_login_enabled() -> bool:
+    return is_monitor_static_login_enabled() or is_monitor_spring_login_enabled()
 
 
 def has_monitor_session() -> bool:
     return bool(session.get("monitor_auth"))
 
 
-def is_valid_monitor_credentials(username: str, password: str) -> bool:
-    if not is_monitor_login_enabled():
-        return False
-    return hmac.compare_digest(clean_text_value(username), MONITOR_USERNAME) and hmac.compare_digest(
-        clean_text_value(password),
-        MONITOR_PASSWORD,
-    )
+def load_monitor_auth_extra_body() -> dict:
+    if not MONITOR_AUTH_EXTRA_BODY_JSON:
+        return {}
+    try:
+        parsed = json.loads(MONITOR_AUTH_EXTRA_BODY_JSON)
+    except json.JSONDecodeError as exc:
+        logger.error("MONITOR AUTH EXTRA BODY JSON invalido: %s", exc)
+        return {}
+    if not isinstance(parsed, dict):
+        logger.error("MONITOR AUTH EXTRA BODY JSON debe ser un objeto JSON")
+        return {}
+    return parsed
+
+
+def authenticate_monitor_via_spring(username: str, password: str) -> Tuple[bool, str, Optional[str]]:
+    if not is_monitor_spring_login_enabled():
+        return False, "login_disabled", None
+
+    payload = load_monitor_auth_extra_body()
+    payload[MONITOR_AUTH_USERNAME_FIELD] = clean_text_value(username)
+    payload[MONITOR_AUTH_PASSWORD_FIELD] = clean_text_value(password)
+
+    try:
+        response = requests.post(
+            SPRING_AUTH_URL,
+            json=payload,
+            timeout=10,
+        )
+    except Exception as exc:
+        logger.exception("MONITOR AUTH EXCEPTION: %s", exc)
+        return False, "service_unavailable", None
+
+    if response.status_code in {401, 403}:
+        return False, "invalid_credentials", None
+    if response.status_code >= 300:
+        logger.error("MONITOR AUTH ERROR %s - %s", response.status_code, response.text)
+        return False, "service_unavailable", None
+
+    try:
+        data = response.json() if response.content else {}
+    except Exception:
+        data = {}
+
+    token_value = clean_text_value(extract_json_path_value(data, SPRING_AUTH_TOKEN_JSON_PATH))
+    return True, "ok", token_value or None
+
+
+def authenticate_monitor_user(username: str, password: str) -> Tuple[bool, str, Optional[dict]]:
+    cleaned_username = clean_text_value(username)
+    cleaned_password = clean_text_value(password)
+    if not cleaned_username or not cleaned_password:
+        return False, "missing_credentials", None
+
+    if is_monitor_static_login_enabled():
+        is_valid = hmac.compare_digest(cleaned_username, MONITOR_USERNAME) and hmac.compare_digest(
+            cleaned_password,
+            MONITOR_PASSWORD,
+        )
+        if not is_valid:
+            return False, "invalid_credentials", None
+        return True, "ok", {"username": cleaned_username, "source": "static", "token": None}
+
+    ok, reason, token_value = authenticate_monitor_via_spring(cleaned_username, cleaned_password)
+    if not ok:
+        return False, reason, None
+    return True, "ok", {"username": cleaned_username, "source": "spring", "token": token_value}
 
 
 def redirect_to_monitor_login():
@@ -1787,6 +1857,7 @@ def home():
     return redirect(url_for("monitor_dashboard"))
 
 
+@app.route("/Login", methods=["GET", "POST"])
 @app.route("/login", methods=["GET", "POST"])
 def monitor_login():
     if not is_monitor_login_enabled():
@@ -1801,10 +1872,20 @@ def monitor_login():
     if request.method == "POST":
         username = request.form.get("username", "")
         password = request.form.get("password", "")
-        if is_valid_monitor_credentials(username, password):
+        auth_ok, reason, auth_data = authenticate_monitor_user(username, password)
+        if auth_ok and auth_data:
             session["monitor_auth"] = True
+            session["monitor_user"] = auth_data.get("username", "")
+            session["monitor_auth_source"] = auth_data.get("source", "")
+            if auth_data.get("token"):
+                session["monitor_access_token"] = auth_data["token"]
+            else:
+                session.pop("monitor_access_token", None)
             return redirect(next_url)
-        error_message = "Credenciales invalidas."
+        if reason == "service_unavailable":
+            error_message = "No fue posible validar el acceso en este momento."
+        else:
+            error_message = "Credenciales invalidas."
 
     return render_template("login.html", error_message=error_message, next_url=next_url)
 
@@ -1812,6 +1893,9 @@ def monitor_login():
 @app.post("/logout")
 def monitor_logout():
     session.pop("monitor_auth", None)
+    session.pop("monitor_user", None)
+    session.pop("monitor_auth_source", None)
+    session.pop("monitor_access_token", None)
     if is_monitor_login_enabled():
         return redirect(url_for("monitor_login"))
     return redirect(url_for("monitor_dashboard"))

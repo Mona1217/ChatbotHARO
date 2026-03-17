@@ -14,7 +14,7 @@
     <section class="login-card">
       <p class="toolbar-eyebrow">Monitor del bot</p>
       <h1>Iniciar sesion</h1>
-      <p class="login-copy">Entra con las credenciales del monitor para ver conversaciones, exportaciones y estado del bot.</p>
+      <p class="login-copy">Entra con tu cuenta del sistema para ver conversaciones, exportaciones y estado del bot.</p>
 
       {% if error_message %}
       <div class="error-banner login-error">{{ error_message }}</div>
@@ -23,7 +23,7 @@
       <form method="post" class="login-form">
         <input type="hidden" name="next" value="{{ next_url }}" />
 
-        <label class="login-label" for="username">Usuario</label>
+        <label class="login-label" for="username">Correo o usuario</label>
         <input id="username" name="username" type="text" class="login-input" autocomplete="username" required />
 
         <label class="login-label" for="password">Contrasena</label>
@@ -31,6 +31,8 @@
 
         <button type="submit" class="btn btn-primary login-submit">Entrar</button>
       </form>
+
+      <p class="login-note">Despues de validar tu cuenta entraras directamente al monitor.</p>
     </section>
   </main>
 </body>

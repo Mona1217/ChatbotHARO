@@ -38,6 +38,8 @@
   const refreshBtn = document.getElementById("refreshBtn");
   const activeContact = document.getElementById("activeContact");
   const activeMeta = document.getElementById("activeMeta");
+  const backToContactsBtn = document.getElementById("backToContactsBtn");
+  const mobileViewport = window.matchMedia("(max-width: 760px)");
 
   const state = {
     paused: false,
@@ -49,6 +51,7 @@
     version: 0,
     stream: null,
     streamRetryTimer: null,
+    mobileView: "contacts",
   };
 
   function withToken(url) {
@@ -224,6 +227,41 @@
       state.streamRetryTimer = null;
     }
   }
+
+  function isMobileViewport() {
+    return mobileViewport.matches;
+  }
+
+  function syncMobileLayout() {
+    if (!isMobileViewport()) {
+      body.classList.remove("mobile-chat-open");
+      if (backToContactsBtn) {
+        backToContactsBtn.classList.add("hidden");
+      }
+      return;
+    }
+
+    const chatOpen = state.mobileView === "chat" && Boolean(state.selectedPeer);
+    body.classList.toggle("mobile-chat-open", chatOpen);
+    if (backToContactsBtn) {
+      backToContactsBtn.classList.toggle("hidden", !chatOpen);
+    }
+  }
+
+  function showContactsView() {
+    state.mobileView = "contacts";
+    syncMobileLayout();
+  }
+
+  function showChatView() {
+    if (!state.selectedPeer) {
+      state.mobileView = "contacts";
+    } else {
+      state.mobileView = "chat";
+    }
+    syncMobileLayout();
+  }
+
 
   function stopStream() {
     clearStreamRetryTimer();
@@ -474,6 +512,7 @@
       activeContact.textContent = "Sin contacto seleccionado";
       activeMeta.textContent = "Selecciona un chat para ver el historial.";
       chatEmpty.classList.remove("hidden");
+      showContactsView();
       return;
     }
 
@@ -499,6 +538,7 @@
 
     renderContacts(contacts);
     renderConversation(state.selectedPeer);
+    syncMobileLayout();
     eventCount.textContent = String(state.totalEvents || events.length);
 
     if (state.selectedPeer && !state.conversationByPeer[state.selectedPeer]) {
@@ -697,11 +737,20 @@
     state.selectedPeer = item.dataset.peer;
     renderContacts(state.contacts);
     renderConversation(state.selectedPeer);
+    showChatView();
     loadPeerConversation(state.selectedPeer, { force: false, silent: true }).catch(() => {});
   });
 
   if (exportBtn) {
     exportBtn.addEventListener("click", downloadContactsExcel);
+  }
+  if (backToContactsBtn) {
+    backToContactsBtn.addEventListener("click", showContactsView);
+  }
+  if (mobileViewport.addEventListener) {
+    mobileViewport.addEventListener("change", syncMobileLayout);
+  } else if (mobileViewport.addListener) {
+    mobileViewport.addListener(syncMobileLayout);
   }
   toggleBtn.addEventListener("click", togglePause);
   refreshBtn.addEventListener("click", () => loadEvents());
@@ -712,5 +761,6 @@
     }
   });
 
+  syncMobileLayout();
   loadEvents();
 })();
