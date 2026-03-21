@@ -1,0 +1,787 @@
+/* ===== CONFIGURACIÓN GENERAL ===== */
+body {
+  font-family: "Poppins", Georgia, 'Times New Roman', Times, serif;
+  color: #111;
+  background-color: #fff;
+  scroll-behavior: smooth;
+}
+
+section {
+  scroll-margin-top: 90px;
+}
+
+/* ===== TOPBAR ===== */
+.logo-top {
+  height: 45px;
+}
+
+/* ===== NAVBAR GENERAL ===== */
+.navbar {
+  padding: 0.75rem 1rem;
+}
+
+.navbar-brand {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* ===== MENÚ PRINCIPAL (Desktop) ===== */
+.navbar-nav .nav-link {
+  position: relative;
+  color: #111 !important;
+  font-weight: 500;
+  margin: 0 0.8rem;
+  transition: color 0.3s ease;
+  padding-bottom: 4px;
+}
+
+
+/* 🔹 Hover y activo visibles correctamente */
+.navbar-nav .nav-link:hover::after,
+.navbar-nav .nav-link.active::after {
+  width: 100%;
+}
+
+/* ===== BOTÓN DEL CARRITO ===== */
+#cartBtn {
+  border-width: 2px;
+  border-radius: 8px;
+  height: 42px;
+  width: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#cartBtn i {
+  font-size: 1.25rem;
+}
+#cartBtn:hover {
+  background-color: #ffcc00;
+  color: #111;
+  border-color: #ffcc00;
+}
+
+/* ===== OFFCANVAS MENÚ MÓVIL ===== */
+.offcanvas {
+  background-color: #fff;
+  width: 250px;
+  padding: 1rem 1.5rem;
+}
+.offcanvas-header {
+  padding-bottom: 0.5rem;
+}
+.offcanvas-title {
+  font-weight: 600;
+}
+
+/* 🔹 Enlaces del offcanvas */
+.offcanvas .nav-link {
+  position: relative;
+  display: block;
+  color: #111 !important;
+  font-weight: 500;
+  text-decoration: none;
+  margin: 0.4rem 0;
+  padding: 0.3rem 0;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+}
+
+/* 🔹 Línea amarilla del mismo ancho del texto en offcanvas */
+.offcanvas .nav-link::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0%;
+  height: 2px;
+  background-color: #ffcc00;
+  transition: width 0.3s ease;
+}
+
+.offcanvas .nav-link:hover::after,
+.offcanvas .nav-link.active::after {
+  width: 100%;
+}
+
+/* ===== TÍTULOS DE SECCIONES ===== */
+.section-title {
+  position: relative;
+  display: inline-block;
+  color: #111;
+  font-weight: 700;
+  font-size: 1.8rem;
+  text-align: center;
+  margin: 0 auto 1.5rem;
+  padding-bottom: 6px;
+}
+
+.section-title::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%; /* 🔹 ahora coincide con el texto */
+  height: 2px;
+  background-color: #ffcc00;
+  border-radius: 2px;
+}
+
+/* ===== CARRUSEL ===== */
+.carousel-item img {
+  height: 75vh;
+  object-fit: cover;
+  filter: brightness(0.9);
+}
+
+.carousel-caption {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding: 0 15px;
+}
+
+.translucent-box {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(6px);
+  border-radius: 12px;
+  padding: 1rem 2rem;
+  color: #111;
+  max-width: 600px;
+  margin: 0 auto;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  text-align: center;
+}
+
+.translucent-box h2 {
+  font-weight: 700;
+  font-size: 1.8rem;
+  color: #111;
+  margin-bottom: 0.5rem;
+}
+
+/* ===== BOTONES ===== */
+.btn-danger {
+  background-color: #e63946;
+  border: none;
+}
+
+.btn-danger:hover,
+.btn-outline-danger:hover {
+  background-color: #ffcc00;
+  color: #111;
+  border: none;
+  transition: 0.3s ease;
+}
+
+/* ===== TARJETAS ===== */
+.card {
+  border-radius: 10px;
+  transition: transform 0.3s ease;
+}
+
+.card:hover {
+  transform: scale(1.03);
+}
+
+/* ===== PROCESO ===== */
+.process-flow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.circle {
+  width: 110px;
+  height: 110px;
+  background: #fff;
+  border: 3px solid #e63946;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-weight: 600;
+  color: #111;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.circle small {
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+
+.arrow {
+  font-size: 2rem;
+  color: #ffcc00;
+}
+
+/* ====== CARRITO ====== */
+#offcanvasCart .offcanvas-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#cartItems {
+  width: 100%;
+  padding: 0;
+  margin-bottom: 1rem;
+  list-style: none;
+}
+
+.cart-item-fixed {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 48px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+  width: 100%;
+  transition: background 0.2s ease-in-out;
+}
+
+.cart-item-fixed:hover {
+  background-color: #fff7cc;
+}
+
+.cart-actions button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+#clearCart,
+#goPay {
+  height: 48px;
+  font-weight: 600;
+  border-radius: 8px;
+  width: 100%;
+}
+
+#clearCart {
+  background-color: #e63946;
+  color: white;
+  border: none;
+}
+
+#clearCart:hover {
+  background-color: #ffcc00;
+  color: #111;
+}
+
+#goPay {
+  border: 2px solid #e63946;
+  color: #e63946;
+  background-color: #fff;
+}
+
+#goPay:hover {
+  background-color: #ffcc00;
+  color: #111;
+  border-color: #ffcc00;
+}
+
+/* ===== OTROS ===== */
+.footer-logo {
+  height: 50px;
+}
+
+.whatsapp-float {
+  position: fixed;
+  bottom: 25px;
+  right: 25px;
+  z-index: 999;
+}
+
+.whatsapp-float img {
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s;
+}
+
+.whatsapp-float img:hover {
+  transform: scale(1.1);
+}
+
+/* ===== CORRECCIONES FINALES ===== */
+
+
+/* Tamaño fijo del video */
+#nosotros video {
+  width: 100%;
+  height: 500px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 992px) {
+  .navbar {
+    flex-wrap: nowrap;
+  }
+  .navbar-toggler {
+    order: 1;
+  }
+  .navbar-brand {
+    order: 2;
+    margin-left: 0;
+  }
+  #cartBtn {
+    order: 3;
+    margin-left: auto;
+  }
+}
+
+/* ===== FIX: subrayado exacto al ancho del texto (desktop) ===== */
+.navbar-nav .nav-link {
+  display: inline-block;          /* el ancho = ancho del texto */
+  position: relative;
+  padding-bottom: 4px;            /* espacio para la línea */
+}
+
+
+
+.navbar-nav .nav-link:hover::after,
+.navbar-nav .nav-link.active::after {
+  width: 100%;                    /* igual al ancho del texto */
+}
+
+/* Mantener color del texto siempre negro */
+.navbar-nav .nav-link,
+.navbar-nav .nav-link:hover,
+.navbar-nav .nav-link.active {
+  color: #111 !important;
+}
+
+/* ===== FIX: offcanvas (móvil) subrayado exacto ===== */
+.offcanvas .nav-link {
+  display: inline-block;          /* clave para que mida el texto */
+  position: relative;
+  padding-bottom: 4px;
+}
+
+.offcanvas .nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 0;
+  background: #ffcc00;
+  transition: width .25s ease;
+}
+
+.offcanvas .nav-link:hover::after,
+.offcanvas .nav-link.active::after {
+  width: 100%;
+}
+
+/* ===== FIX FINAL: subrayados exactos al texto ===== */
+
+/* NAVBAR (escritorio): el subrayado ocupa exactamente el texto */
+.navbar-nav > .nav-item > .nav-link {
+  display: inline-block;        /* el ancho del enlace = ancho del texto */
+  position: relative;
+  padding-bottom: 4px;          /* espacio para la línea */
+}
+.navbar-nav > .nav-item > .nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;                      /* arranca justo bajo el texto */
+  bottom: 0;
+  height: 2px;
+  width: 0;                     /* animación desde 0 */
+  background: #ffcc00;
+  transition: width .25s ease;
+}
+.navbar-nav > .nav-item > .nav-link:hover::after,
+.navbar-nav > .nav-item > .nav-link.active::after {
+  width: 100%;                  /* igual al ancho del texto */
+}
+
+/* OFFCANVAS (móvil): mismo comportamiento */
+.offcanvas .nav-link {
+  display: inline-block;        /* clave para medir el texto */
+  position: relative;
+  padding-bottom: 4px;
+}
+.offcanvas .nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 0;
+  background: #ffcc00;
+  transition: width .25s ease;
+}
+.offcanvas .nav-link:hover::after,
+.offcanvas .nav-link.active::after {
+  width: 100%;
+}
+
+/* TÍTULOS DE SECCIÓN: línea exactamente del ancho del título */
+h2.section-title {
+  display: inline-block !important;   /* evita que se expanda al 100% */
+  margin: 0 auto 1.5rem !important;   /* centrado horizontal */
+  text-align: center;                 /* por si el contenedor no centra */
+  position: relative;
+  padding-bottom: 6px;
+}
+h2.section-title::after {
+  content: "";
+  position: absolute;
+  left: 0;                            /* que empiece bajo el texto */
+  bottom: 0;
+  height: 2px;
+  width: 100% !important;             /* exactamente el ancho del texto */
+  background: #ffcc00;
+  border-radius: 2px;
+  transform: none !important;         /* anula reglas previas de translate */
+}
+
+/* ===== FIX FINAL ===== */
+
+/* 🔸 Centrar todos los títulos con línea amarilla exacta */
+
+
+.section-title::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;                        /* igual al texto */
+  background: #ffcc00;
+  border-radius: 2px;
+}
+
+/* 🔸 Alinear correctamente la línea del menú (navbar) */
+.navbar-nav .nav-link {
+  position: relative;
+  display: inline-block;              /* que mida solo el texto */
+  padding-bottom: 4px;
+  text-align: center;
+  color: #111 !important;
+  font-weight: 500;
+}
+
+.navbar-nav .nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;                        /* arranca exactamente bajo el texto */
+  bottom: 0;
+  height: 2px;
+  width: 0;                       /* se anima desde 0 */
+  background: #ffcc00;
+  transition: width .25s ease;
+}
+
+.navbar-nav .nav-link:hover::after,
+.navbar-nav .nav-link.active::after {
+  width: 100%;                        /* exactamente el ancho del texto */
+}
+
+/* 🔸 Mantener color del texto */
+.navbar-nav .nav-link,
+.navbar-nav .nav-link:hover,
+.navbar-nav .nav-link.active {
+  color: #111 !important;
+}
+
+/* ===== FIX: offcanvas (móvil) subrayado exacto ===== */
+.offcanvas .nav-link {
+  display: inline-block;          /* clave para que mida el texto */
+  position: relative;
+  padding-bottom: 4px;
+}
+
+.offcanvas .nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 0;
+  background: #ffcc00;
+  transition: width .25s ease;
+}
+
+.offcanvas .nav-link:hover::after,
+.offcanvas .nav-link.active::after {
+  width: 100%;
+}
+
+/* ===== CENTRAR TODOS LOS TÍTULOS (sin correr la línea) ===== */
+.section-title,
+h2.section-title {
+  display: block !important;
+  width: max-content;              /* el ancho = ancho del texto */
+  margin: 0 auto 1.5rem !important;/* centra el bloque */
+  text-align: center !important;
+  position: relative;
+  left: auto !important;
+  transform: none !important;      /* evita que se desplace */
+}
+
+/* la línea queda exactamente bajo el texto */
+.section-title::after,
+h2.section-title::after {
+  left: 0 !important;
+  transform: none !important;
+  width: 100% !important;          /* del mismo ancho que el texto */
+  height: 2px;
+  background: #ffcc00;
+  bottom: 0;
+}
+
+/* ===== CONSULTAS (UNA POR FILA) ===== */
+.consulta-box {
+  width: 100%;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.consulta-box:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+
+blockquote {
+  font-style: italic;
+  font-size: 1.1rem;
+  color: #333;
+  margin: 0 auto;
+  max-width: 600px;
+  line-height: 1.6;
+}
+
+blockquote small {
+  display: block;
+  margin-top: 0.5rem;
+  color: #666;
+}
+
+blockquote span {
+  display: block;
+  margin: 0.5rem 0;
+  font-size: 1.2rem;
+}
+
+/* ===== ALIANZAS: más juntos ===== */
+.alianzas-grid{
+  row-gap: 12px;      /* espacio vertical pequeño */
+}
+
+.logo-box{
+  width: 170px;       /* todos iguales */
+  aspect-ratio: 1 / 1;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 14px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 12px;      /* menos padding para que se vean más compactos */
+}
+
+.logo-img{
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* En pantallas grandes, un poquito más grande si quieres */
+@media (min-width: 992px){
+  .logo-box{ width: 190px; }
+}
+
+/* ===== FOOTER HARO ===== */
+.footer-haro{
+  background: #0b1220; /* azul oscuro elegante */
+}
+
+.footer-logo-haro{
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+  padding: 6px;
+}
+
+.footer-title{
+  letter-spacing: .08em;
+}
+
+.footer-ico{
+  color: #ef4444; /* rojo acorde al sitio */
+  font-size: 1.05rem;
+  margin-top: 2px;
+}
+
+.footer-link{
+  color: rgba(255,255,255,0.75);
+  text-decoration: none;
+  transition: 0.2s ease;
+}
+
+.footer-link:hover{
+  color: #fff;
+  text-decoration: underline;
+  text-decoration-color: rgba(239,68,68,0.9);
+  text-underline-offset: 4px;
+}
+
+.footer-divider{
+  border-color: rgba(255,255,255,0.12);
+}
+
+.footer-social{
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(255,255,255,0.08);
+  text-decoration: none;
+  transition: 0.2s ease;
+}
+
+.footer-social:hover{
+  background: rgba(239,68,68,0.22);
+  transform: translateY(-1px);
+}
+
+/* ===== OPINIONES ===== */
+.opinion-card{
+  max-width: 850px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 32px 28px;
+  box-shadow: 0 14px 35px rgba(0,0,0,0.08);
+}
+
+.stars{
+  color: #fbbf24;
+  font-size: 1.2rem;
+  margin-bottom: 12px;
+}
+
+.opinion-text{
+  font-size: 1.05rem;
+  color: #374151;
+  margin-bottom: 16px;
+}
+
+.opinion-author{
+  font-weight: 600;
+  color: #6b7280;
+}
+
+/* ===== CONSULTAS ===== */
+.consulta-card{
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.consulta-icon{
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(220, 53, 69, 0.10); /* rojo suave */
+  color: #dc3545; /* bootstrap danger */
+  flex: 0 0 44px;
+}
+
+.consulta-icon i{
+  font-size: 1.2rem;
+}
+
+.logo-navbar{
+  height: 75px;              /* Más grande */
+  width: auto;
+  object-fit: contain;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  transition: transform 0.3s ease;
+}
+
+.logo-navbar:hover{
+  transform: scale(1.05);   /* pequeño efecto elegante */
+}
+
+.navbar {
+  padding-top: 5px !important;
+  padding-bottom: 5px !important;
+  min-height: 70px; /* controla la altura total */
+}
+
+.logo-navbar {
+  height: 60px;   /* antes 75 u 85 */
+  width: auto;
+}
+
+.topbar{
+  padding: 12px 0;     /* MÁS ALTA */
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.topbar-link{
+  color: #000;               /* NEGRO */
+  text-decoration: none;     /* sin subrayado */
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  transition: color 0.2s ease;
+}
+
+.topbar-link:hover{
+  color: #dc3545;            /* rojo institucional al pasar el mouse */
+}
+
+.separator{
+  margin: 0 10px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.cea-outline{
+  color: #dc3545;        /* rojo limpio */
+  font-weight: 900;      
+  letter-spacing: 1px;
+  text-shadow:
+    0.5px 0 black,
+    -0.5px 0 black,
+    0 0.5px black,
+    0 -0.5px black;
+}

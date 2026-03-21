@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Acceso Monitor</title>
+  <title>Preview Login Monitor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Sora:wght@500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='monitor.css') }}" />
+  <link rel="stylesheet" href="../static/base.css" />
+  <link rel="stylesheet" href="../static/styles.css" />
+  <link rel="stylesheet" href="../static/monitor.css" />
 </head>
 <body class="login-body">
   <main class="login-shell">
@@ -18,7 +18,7 @@
         <div class="login-visual-surface" aria-hidden="true">
           <div class="login-visual-overlay"></div>
           <div class="login-logo-hero-wrap">
-            <img src="/static/img/LogoLetrasBlancas.png" alt="Logo HARO" class="login-logo-hero" />
+            <img src="../static/img/LogoLetrasBlancas.png" alt="Logo HARO" class="login-logo-hero" />
           </div>
         </div>
       </div>
@@ -32,23 +32,17 @@
           </div>
         </div>
 
-        {% if error_message %}
-        <div class="error-banner login-error">{{ error_message }}</div>
-        {% endif %}
-
-        <form method="post" class="login-form">
-          <input type="hidden" name="next" value="{{ next_url }}" />
-
+        <form class="login-form">
           <label class="login-label" for="username">Correo</label>
-          <input id="username" name="username" type="text" class="login-input" autocomplete="username" required />
+          <input id="username" name="username" type="text" class="login-input" value="admin@haro.com" />
 
           <label class="login-label" for="password">Contrasena</label>
-          <input id="password" name="password" type="password" class="login-input" autocomplete="current-password" required />
+          <input id="password" name="password" type="password" class="login-input" value="123456" />
 
-          <button type="submit" class="btn btn-primary login-submit">Entrar</button>
+          <button type="button" class="btn btn-primary login-submit">Entrar</button>
         </form>
 
-        <p class="login-note">Despues de validar tu cuenta entraras directamente al monitor.</p>
+        <p class="login-note">Esta pantalla es solo para pruebas visuales locales. No usa Flask ni autenticacion real.</p>
       </div>
     </section>
   </main>

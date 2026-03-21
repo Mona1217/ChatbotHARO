@@ -1,0 +1,34 @@
+/* =========================================================
+   base.css
+   - Variables del tema
+   - Estilos globales (body, secciones, helpers básicos)
+   ========================================================= */
+
+:root{
+  --text: #111;
+  --danger: #e63946;      /* rojo principal */
+  --danger-bs: #dc3545;   /* rojo bootstrap */
+  --accent: #ffcc00;      /* amarillo */
+  --muted: #6c757d;
+  --footer-bg: #0b1220;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+}
+
+*{ box-sizing: border-box; }
+
+body{
+  font-family: "Poppins", Georgia, "Times New Roman", Times, serif;
+  color: var(--text);
+  background: #fff;
+  scroll-behavior: smooth;
+}
+
+section{
+  scroll-margin-top: 90px;
+}
+
+/* Utilidad opcional */
+.text-muted-2{ color: #6b7280; }

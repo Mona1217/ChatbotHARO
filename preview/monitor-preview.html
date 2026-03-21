@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Preview Monitor HARO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Sora:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../static/base.css" />
+  <link rel="stylesheet" href="../static/styles.css" />
+  <link rel="stylesheet" href="../static/monitor.css" />
+</head>
+<body>
+  <main class="dashboard">
+    <input id="toolbarCollapseTogglePreview" class="toolbar-collapse-toggle" type="checkbox" />
+    <header class="monitor-toolbar">
+      <div class="toolbar-copy">
+        <p class="toolbar-eyebrow">Monitor de Ha-Rot</p>
+        <h1>Conversaciones en tiempo real</h1>
+      </div>
+      <div class="toolbar-actions-mobile">
+        <label for="toolbarCollapseTogglePreview" class="toolbar-toggle-btn">Panel</label>
+      </div>
+      <div class="toolbar-metrics">
+        <div class="toolbar-mobile-header">
+          <p class="toolbar-mobile-title">Panel del monitor</p>
+          <label for="toolbarCollapseTogglePreview" class="toolbar-close-btn">Cerrar</label>
+        </div>
+        <span class="chip chip-live">ACTIVO</span>
+        <div class="metric-card">
+          <span class="metric-label">Eventos</span>
+          <strong>128</strong>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Chats</span>
+          <strong>24</strong>
+        </div>
+        <span class="metric-stamp">Ultima actualizacion: 10:42 p. m.</span>
+        <button class="btn btn-soft" type="button">Exportar Excel</button>
+        <button class="btn btn-soft" type="button">Refrescar</button>
+        <button class="btn btn-danger" type="button">Pausar bot</button>
+      </div>
+    </header>
+
+    <section class="workspace">
+      <aside class="contacts-panel">
+        <div class="panel-title-row">
+          <h2>Conversaciones</h2>
+          <span class="panel-meta">24 chats</span>
+        </div>
+
+        <div class="contacts-list">
+          <button type="button" class="contact-item active" data-peer="+57 300 111 2233" data-meta="ultimo 10:41">
+            <div class="avatar">01</div>
+            <div class="contact-main">
+              <div class="contact-top">
+                <span class="contact-name">+57 300 111 2233</span>
+                <span class="contact-time">10:41</span>
+              </div>
+              <div class="contact-preview">Quiero informacion sobre matriculas y costos</div>
+            </div>
+          </button>
+
+          <button type="button" class="contact-item" data-peer="+57 301 555 8899" data-meta="ultimo 10:35">
+            <div class="avatar">02</div>
+            <div class="contact-main">
+              <div class="contact-top">
+                <span class="contact-name">+57 301 555 8899</span>
+                <span class="contact-time">10:35</span>
+              </div>
+              <div class="contact-preview">Gracias, quedo atento a la llamada</div>
+            </div>
+          </button>
+
+          <button type="button" class="contact-item" data-peer="+57 315 440 2200" data-meta="ultimo 09:58">
+            <div class="avatar">03</div>
+            <div class="contact-main">
+              <div class="contact-top">
+                <span class="contact-name">+57 315 440 2200</span>
+                <span class="contact-time">09:58</span>
+              </div>
+              <div class="contact-preview">Necesito soporte tecnico con mi acceso</div>
+            </div>
+          </button>
+
+          <button type="button" class="contact-item" data-peer="+57 320 778 1199" data-meta="ultimo 09:12">
+            <div class="avatar">04</div>
+            <div class="contact-main">
+              <div class="contact-top">
+                <span class="contact-name">+57 320 778 1199</span>
+                <span class="contact-time">09:12</span>
+              </div>
+              <div class="contact-preview">Hola, quiero conocer sedes disponibles</div>
+            </div>
+          </button>
+
+          <button type="button" class="contact-item" data-peer="+57 311 900 8765" data-meta="ultimo ayer">
+            <div class="avatar">05</div>
+            <div class="contact-main">
+              <div class="contact-top">
+                <span class="contact-name">+57 311 900 8765</span>
+                <span class="contact-time">Ayer</span>
+              </div>
+              <div class="contact-preview">Me compartes el horario de atencion</div>
+            </div>
+          </button>
+
+          <button type="button" class="contact-item" data-peer="+57 312 456 7788" data-meta="ultimo ayer">
+            <div class="avatar">06</div>
+            <div class="contact-main">
+              <div class="contact-top">
+                <span class="contact-name">+57 312 456 7788</span>
+                <span class="contact-time">Ayer</span>
+              </div>
+              <div class="contact-preview">Quisiera retomar el proceso de inscripcion</div>
+            </div>
+          </button>
+
+          <button type="button" class="contact-item" data-peer="+57 317 700 3344" data-meta="ultimo ayer">
+            <div class="avatar">07</div>
+            <div class="contact-main">
+              <div class="contact-top">
+                <span class="contact-name">+57 317 700 3344</span>
+                <span class="contact-time">Ayer</span>
+              </div>
+              <div class="contact-preview">Envienme informacion del programa tecnico</div>
+            </div>
+          </button>
+
+          <button type="button" class="contact-item" data-peer="+57 300 876 5544" data-meta="ultimo Mar">
+            <div class="avatar">08</div>
+            <div class="contact-main">
+              <div class="contact-top">
+                <span class="contact-name">+57 300 876 5544</span>
+                <span class="contact-time">Mar</span>
+              </div>
+              <div class="contact-preview">Estoy interesado en homologaciones</div>
+            </div>
+          </button>
+        </div>
+      </aside>
+
+      <section class="chat-panel">
+        <div class="chat-header">
+          <button id="previewBackBtn" class="mobile-back-btn hidden" type="button">Volver</button>
+          <div class="chat-header-copy">
+            <h2 id="previewActiveContact">+57 300 111 2233</h2>
+            <p id="previewActiveMeta" class="subtitle">ultimo 10:41</p>
+          </div>
+        </div>
+
+        <div class="chat-timeline">
+          <article class="msg system">
+            <div class="bubble">
+              <div class="msg-body">Inicio de conversacion monitoreada en HARO.</div>
+              <div class="msg-time">10:20</div>
+            </div>
+          </article>
+
+          <article class="msg inbound">
+            <div class="bubble">
+              <div class="msg-body">Hola, quisiera informacion sobre matriculas.</div>
+              <div class="msg-time">10:21</div>
+            </div>
+          </article>
+
+          <article class="msg outbound">
+            <div class="bubble">
+              <div class="msg-body">Claro. Te puedo ayudar con costos, sedes y proceso de inscripcion. Cual deseas revisar primero?</div>
+              <div class="msg-time">10:22</div>
+            </div>
+          </article>
+
+          <article class="msg inbound">
+            <div class="bubble">
+              <div class="msg-body">Primero los costos y si tienen horario nocturno.</div>
+              <div class="msg-time">10:23</div>
+            </div>
+          </article>
+
+          <article class="msg outbound">
+            <div class="bubble">
+              <div class="msg-body">Tenemos opciones flexibles y jornadas diurnas y nocturnas segun el programa. Si quieres, te conecto con asesor comercial.</div>
+              <div class="msg-time">10:24</div>
+            </div>
+          </article>
+
+          <article class="msg inbound">
+            <div class="bubble">
+              <div class="msg-body">Si por favor, tambien quiero saber si manejan financiacion.</div>
+              <div class="msg-time">10:25</div>
+            </div>
+          </article>
+
+          <article class="msg outbound">
+            <div class="bubble">
+              <div class="msg-body">Perfecto. Ya registre tu interes para que un asesor te contacte y te comparta opciones de pago.</div>
+              <div class="msg-time">10:26</div>
+            </div>
+          </article>
+
+          <article class="msg inbound">
+            <div class="bubble">
+              <div class="msg-body">Muchas gracias.</div>
+              <div class="msg-time">10:27</div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </section>
+  </main>
+  <script>
+    (function () {
+      const body = document.body;
+      const items = document.querySelectorAll(".contact-item");
+      const backBtn = document.getElementById("previewBackBtn");
+      const activeContact = document.getElementById("previewActiveContact");
+      const activeMeta = document.getElementById("previewActiveMeta");
+      const mobileQuery = window.matchMedia("(max-width: 760px)");
+
+      function syncBackButton() {
+        if (!backBtn) return;
+        backBtn.classList.toggle("hidden", !(mobileQuery.matches && body.classList.contains("mobile-chat-open")));
+      }
+
+      items.forEach((item) => {
+        item.addEventListener("click", () => {
+          items.forEach((node) => node.classList.remove("active"));
+          item.classList.add("active");
+          activeContact.textContent = item.dataset.peer || "Sin contacto";
+          activeMeta.textContent = item.dataset.meta || "Sin actividad reciente";
+          if (mobileQuery.matches) {
+            body.classList.add("mobile-chat-open");
+          }
+          syncBackButton();
+        });
+      });
+
+      if (backBtn) {
+        backBtn.addEventListener("click", () => {
+          body.classList.remove("mobile-chat-open");
+          syncBackButton();
+        });
+      }
+
+      if (mobileQuery.addEventListener) {
+        mobileQuery.addEventListener("change", () => {
+          if (!mobileQuery.matches) {
+            body.classList.remove("mobile-chat-open");
+          }
+          syncBackButton();
+        });
+      }
+
+      syncBackButton();
+    })();
+  </script>
+</body>
+</html>
