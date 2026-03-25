@@ -17,6 +17,7 @@
   const providedPauseUrl = readTemplateSafe(body.dataset.pauseUrl) || "";
   const providedStreamUrl = readTemplateSafe(body.dataset.streamUrl) || "";
   const providedExportUrl = readTemplateSafe(body.dataset.exportUrl) || "";
+  const providedExportChatUrl = readTemplateSafe(body.dataset.exportChatUrl) || "";
   const explicitApiBaseRaw = readTemplateSafe(query.get("api_base")) || readTemplateSafe(query.get("api")) || "";
   const explicitApiBase = explicitApiBaseRaw.replace(/\/+$/, "");
   const pollInput = readTemplateSafe(body.dataset.pollSeconds) || query.get("poll") || "5";
@@ -34,6 +35,7 @@
   const lastUpdate = document.getElementById("lastUpdate");
   const statusBadge = document.getElementById("botStatus");
   const exportBtn = document.getElementById("exportNumbersBtn");
+  const exportChatBtn = document.getElementById("exportChatBtn");
   const toggleBtn = document.getElementById("togglePauseBtn");
   const refreshBtn = document.getElementById("refreshBtn");
   const activeContact = document.getElementById("activeContact");
@@ -74,6 +76,9 @@
     }
     if (kind === "export") {
       return providedExportUrl;
+    }
+    if (kind === "export_chat") {
+      return providedExportChatUrl;
     }
     return "";
   }
@@ -120,8 +125,18 @@
     const candidates = [];
     const seen = new Set();
     const path = window.location.pathname.replace(/\/+$/, "");
-    const directMonitorPath = kind === "export" ? "/monitor/export/contacts.xlsx" : `/monitor/${kind}`;
-    const directApiPath = kind === "export" ? "/api/monitor/export/contacts.xlsx" : `/api/monitor/${kind}`;
+    const directMonitorPath =
+      kind === "export"
+        ? "/monitor/export/contacts.xlsx"
+        : kind === "export_chat"
+          ? "/monitor/export/chat.xlsx"
+          : `/monitor/${kind}`;
+    const directApiPath =
+      kind === "export"
+        ? "/api/monitor/export/contacts.xlsx"
+        : kind === "export_chat"
+          ? "/api/monitor/export/chat.xlsx"
+          : `/api/monitor/${kind}`;
 
     function add(rawPath) {
       const normalized = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
@@ -506,8 +521,16 @@
     return row;
   }
 
+  function syncExportChatButton(peer) {
+    if (!exportChatBtn) {
+      return;
+    }
+    exportChatBtn.disabled = !peer;
+  }
+
   function renderConversation(peer) {
     chatTimeline.innerHTML = "";
+    syncExportChatButton(peer);
     if (!peer) {
       activeContact.textContent = "Sin contacto seleccionado";
       activeMeta.textContent = "Selecciona un chat para ver el historial.";
@@ -729,6 +752,22 @@
     window.location.assign(urls[0]);
   }
 
+  function downloadSelectedChatExcel() {
+    if (!state.selectedPeer) {
+      showError("Selecciona un chat para exportar.");
+      return;
+    }
+
+    const urls = composeCandidateUrls("export_chat");
+    if (!urls.length) {
+      showError("No encontre una ruta de exportacion de chat disponible.");
+      return;
+    }
+
+    hideError();
+    window.location.assign(addQueryParam(urls[0], "peer", state.selectedPeer));
+  }
+
   contactsList.addEventListener("click", (event) => {
     const item = event.target.closest(".contact-item");
     if (!item) {
@@ -743,6 +782,9 @@
 
   if (exportBtn) {
     exportBtn.addEventListener("click", downloadContactsExcel);
+  }
+  if (exportChatBtn) {
+    exportChatBtn.addEventListener("click", downloadSelectedChatExcel);
   }
   if (backToContactsBtn) {
     backToContactsBtn.addEventListener("click", showContactsView);

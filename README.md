@@ -40,6 +40,7 @@ Webhook local:
 - Panel: `GET /monitor`
 - Eventos JSON: `GET /monitor/events`
 - Exportar numeros a Excel: `GET /monitor/export/contacts.xlsx`
+- Exportar chat a Excel: `GET /monitor/export/chat.xlsx?peer=573001234567`
 - Boton de pausa/reanudar: `POST /monitor/pause` (desde el mismo panel)
 - Frontend del monitor (estilo WhatsApp simulado): `templates/monitor.html` + `static/monitor.css` + `static/monitor.js`
 

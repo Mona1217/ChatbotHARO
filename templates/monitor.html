@@ -18,6 +18,7 @@
   data-pause-url="{{ pause_url }}"
   data-stream-url="{{ stream_url }}"
   data-export-url="{{ export_url }}"
+  data-export-chat-url="{{ export_chat_url }}"
 >
   <main class="dashboard">
     <input id="toolbarCollapseToggle" class="toolbar-collapse-toggle" type="checkbox" />
@@ -45,6 +46,7 @@
         </div>
         <span id="lastUpdate" class="metric-stamp">Sin actualizar</span>
         <button id="exportNumbersBtn" class="btn btn-soft" type="button">Exportar Excel</button>
+        <button id="exportChatBtn" class="btn btn-soft" type="button" disabled>Exportar chat</button>
         <button id="refreshBtn" class="btn btn-soft" type="button">Refrescar</button>
         <button id="togglePauseBtn" class="btn btn-danger" type="button">Pausar bot</button>
         {% if monitor_login_enabled %}

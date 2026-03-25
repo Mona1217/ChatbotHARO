@@ -98,6 +98,8 @@ MONITOR_CORS_PATHS = {
     "/api/monitor/stream",
     "/monitor/export/contacts.xlsx",
     "/api/monitor/export/contacts.xlsx",
+    "/monitor/export/chat.xlsx",
+    "/api/monitor/export/chat.xlsx",
 }
 SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "").strip().lower() in {"1", "true", "yes", "y"}
 
@@ -255,6 +257,9 @@ def record_skipped_action(peer: str, action_type: str, reason: str) -> None:
 
 
 def get_monitor_db_connection() -> sqlite3.Connection:
+    db_dir = os.path.dirname(MONITOR_DB_PATH)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
     conn = sqlite3.connect(MONITOR_DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
@@ -500,6 +505,15 @@ def normalize_phone_digits(peer: str) -> str:
     return re.sub(r"\D+", "", clean_text_value(peer))
 
 
+def safe_filename_component(value: str, fallback: str = "archivo") -> str:
+    cleaned = clean_text_value(value)
+    if not cleaned:
+        return fallback
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "_", cleaned)
+    cleaned = cleaned.strip("._-")
+    return cleaned or fallback
+
+
 def build_monitor_contact_rows_from_events(events: List[dict]) -> List[dict]:
     grouped: Dict[str, dict] = {}
 
@@ -646,6 +660,64 @@ def build_contacts_excel_file(rows: List[dict]) -> BytesIO:
     for column_cells in sheet.columns:
         max_length = max(len(clean_text_value(cell.value)) for cell in column_cells)
         sheet.column_dimensions[column_cells[0].column_letter].width = min(max(max_length + 2, 14), 38)
+
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+    return output
+
+
+def build_chat_excel_file(peer: str, events: List[dict]) -> BytesIO:
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Alignment, Font, PatternFill
+    except ImportError as exc:
+        raise RuntimeError("Falta openpyxl. Instala requirements.txt para exportar a Excel.") from exc
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Chat"
+
+    headers = [
+        "Version",
+        "Timestamp",
+        "Direccion",
+        "Tipo",
+        "Mensaje",
+        "Status",
+        "Detalle",
+    ]
+    sheet.append(headers)
+
+    header_fill = PatternFill(fill_type="solid", fgColor="0F766E")
+    header_font = Font(color="FFFFFF", bold=True)
+    header_alignment = Alignment(horizontal="center", vertical="center")
+
+    for cell in sheet[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_alignment
+
+    for event in events:
+        sheet.append(
+            [
+                int(event.get("version", 0) or 0),
+                clean_text_value(event.get("ts")),
+                clean_text_value(event.get("direction")),
+                clean_text_value(event.get("event_type")),
+                clean_text_value(event.get("body")),
+                clean_text_value(event.get("status")),
+                clean_text_value(event.get("detail")),
+            ]
+        )
+
+    for column_cells in sheet.columns:
+        max_length = max(len(clean_text_value(cell.value)) for cell in column_cells)
+        sheet.column_dimensions[column_cells[0].column_letter].width = min(max(max_length + 2, 12), 64)
+
+    meta = workbook.create_sheet("Meta")
+    meta.append(["Peer", clean_text_value(peer)])
+    meta.append(["Total eventos", len(events)])
 
     output = BytesIO()
     workbook.save(output)
@@ -1949,6 +2021,8 @@ def apply_monitor_cors_headers(response):
 @app.route("/api/monitor/stream", methods=["OPTIONS"])
 @app.route("/monitor/export/contacts.xlsx", methods=["OPTIONS"])
 @app.route("/api/monitor/export/contacts.xlsx", methods=["OPTIONS"])
+@app.route("/monitor/export/chat.xlsx", methods=["OPTIONS"])
+@app.route("/api/monitor/export/chat.xlsx", methods=["OPTIONS"])
 def monitor_cors_preflight():
     return "", 204
 
@@ -2031,6 +2105,7 @@ def monitor_dashboard():
         pause_url=url_for("monitor_pause"),
         stream_url=url_for("monitor_stream"),
         export_url=url_for("monitor_export_contacts"),
+        export_chat_url=url_for("monitor_export_chat"),
         monitor_login_enabled=is_monitor_login_enabled(),
     )
 
@@ -2052,6 +2127,36 @@ def monitor_export_contacts():
         return jsonify({"ok": False, "error": "export_failed"}), 500
 
     filename = f"numeros_bot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@app.get("/monitor/export/chat.xlsx")
+@app.get("/api/monitor/export/chat.xlsx")
+def monitor_export_chat():
+    if not is_monitor_authorized():
+        return "unauthorized", 401
+
+    peer = clean_text_value(request.args.get("peer"))
+    if not peer:
+        return jsonify({"ok": False, "error": "missing_peer"}), 400
+
+    try:
+        events = get_monitor_events(since=0, peer=peer)
+        output = build_chat_excel_file(peer, events)
+    except RuntimeError as e:
+        logger.error("No se pudo exportar chat a Excel: %s", e)
+        return jsonify({"ok": False, "error": str(e)}), 500
+    except Exception as e:
+        logger.exception("Error generando Excel de chat: %s", e)
+        return jsonify({"ok": False, "error": "export_failed"}), 500
+
+    peer_component = normalize_phone_digits(peer) or safe_filename_component(peer, fallback="peer")
+    filename = f"chat_{peer_component}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     return send_file(
         output,
         as_attachment=True,
