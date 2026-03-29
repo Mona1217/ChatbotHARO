@@ -411,34 +411,104 @@
     return state.allEvents.filter((event) => normalizePeer(event) === peer);
   }
 
-  function formatClock(ts) {
+  function parseMonitorTimestamp(ts) {
     if (!ts) {
-      return "--:--";
+      return null;
     }
 
     const raw = String(ts).trim();
     if (!raw) {
-      return "--:--";
+      return null;
     }
-
-    let date = null;
 
     // Epoch (segundos o milisegundos)
     if (/^\d+$/.test(raw)) {
       const numeric = Number(raw);
       const millis = numeric > 1000000000000 ? numeric : numeric * 1000;
-      date = new Date(millis);
-    } else {
-      // Backend guarda "%Y-%m-%d %H:%M:%S" en UTC.
-      const normalized = raw.replace(" ", "T");
-      const looksLikeNaiveUtc = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(normalized);
-      date = new Date(looksLikeNaiveUtc ? `${normalized}Z` : normalized);
+      const date = new Date(millis);
+      return Number.isNaN(date.getTime()) ? null : date;
     }
 
-    if (!date || Number.isNaN(date.getTime())) {
+    // Backend guarda "%Y-%m-%d %H:%M:%S" en UTC.
+    const normalized = raw.replace(" ", "T");
+    const looksLikeNaiveUtc = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(normalized);
+    const date = new Date(looksLikeNaiveUtc ? `${normalized}Z` : normalized);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  function formatClock(ts, { includeSeconds = false } = {}) {
+    const raw = ts ? String(ts).trim() : "";
+    const date = parseMonitorTimestamp(ts);
+    if (!date) {
+      return raw || "--:--";
+    }
+
+    return date.toLocaleTimeString(
+      [],
+      includeSeconds
+        ? { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }
+        : { hour: "2-digit", minute: "2-digit", hour12: false },
+    );
+  }
+
+  function formatFullTimestamp(ts) {
+    const raw = ts ? String(ts).trim() : "";
+    const date = parseMonitorTimestamp(ts);
+    if (!date) {
       return raw;
     }
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return date.toLocaleString([], {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+  }
+
+  function formatHeaderStamp(ts) {
+    const raw = ts ? String(ts).trim() : "";
+    const date = parseMonitorTimestamp(ts);
+    if (!date) {
+      return raw || "--:--";
+    }
+    const day = date.toLocaleDateString([], { day: "2-digit", month: "short" });
+    const time = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+    return `${day} · ${time}`;
+  }
+
+  function dayKeyFromTimestamp(ts) {
+    const date = parseMonitorTimestamp(ts);
+    if (!date) {
+      return "";
+    }
+    const year = String(date.getFullYear());
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  function dayLabelFromTimestamp(ts) {
+    const raw = ts ? String(ts).trim() : "";
+    const date = parseMonitorTimestamp(ts);
+    if (!date) {
+      return raw;
+    }
+    return date.toLocaleDateString([], { year: "numeric", month: "long", day: "2-digit" });
+  }
+
+  function buildDaySeparator(ts) {
+    const row = document.createElement("div");
+    row.className = "day-separator";
+
+    const chip = document.createElement("span");
+    chip.className = "day-separator-chip";
+    chip.textContent = dayLabelFromTimestamp(ts);
+
+    row.appendChild(chip);
+    return row;
   }
 
   function groupContacts(events) {
@@ -533,7 +603,8 @@
 
     const time = document.createElement("div");
     time.className = "msg-time";
-    time.textContent = formatClock(event.ts);
+    time.textContent = formatClock(event.ts, { includeSeconds: true });
+    time.title = formatFullTimestamp(event.ts);
     bubble.appendChild(time);
 
     row.appendChild(bubble);
@@ -562,8 +633,15 @@
     const lastEvent = events.length ? events[events.length - 1] : null;
 
     activeContact.textContent = peer;
-    activeMeta.textContent = `ultimo ${formatClock(lastEvent?.ts)}`;
+    activeMeta.textContent = `Último: ${formatHeaderStamp(lastEvent?.ts)}`;
+
+    let lastDayKey = "";
     events.forEach((event) => {
+      const dayKey = dayKeyFromTimestamp(event.ts);
+      if (dayKey && dayKey !== lastDayKey) {
+        chatTimeline.appendChild(buildDaySeparator(event.ts));
+        lastDayKey = dayKey;
+      }
       chatTimeline.appendChild(buildMessageNode(event));
     });
     chatEmpty.classList.toggle("hidden", events.length > 0);
