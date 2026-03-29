@@ -1095,18 +1095,20 @@ def is_monitor_authorized() -> bool:
     if has_monitor_session():
         return True
 
+    # Si hay MONITOR_TOKEN, debe permitir acceso aunque el monitor use login (sirve para frontends externos).
+    if MONITOR_TOKEN:
+        token = (
+            request.args.get("token")
+            or request.form.get("token")
+            or request.headers.get("X-Monitor-Token")
+        )
+        if token == MONITOR_TOKEN:
+            return True
+
     if is_monitor_login_enabled():
         return False
 
-    if not MONITOR_TOKEN:
-        return True
-
-    token = (
-        request.args.get("token")
-        or request.form.get("token")
-        or request.headers.get("X-Monitor-Token")
-    )
-    return token == MONITOR_TOKEN
+    return not MONITOR_TOKEN
 
 
 def get_monitor_cors_origin() -> str:

@@ -56,6 +56,55 @@
     mobileView: "contacts",
   };
 
+  const cache = {
+    key: "haro_monitor_cache_v1",
+    maxEvents: 800,
+  };
+
+  function loadCachedState() {
+    try {
+      const raw = window.localStorage.getItem(cache.key);
+      if (!raw) {
+        return false;
+      }
+      const data = JSON.parse(raw);
+      const events = Array.isArray(data?.events) ? data.events : [];
+      if (!events.length) {
+        return false;
+      }
+      const normalizedEvents = events.slice(-cache.maxEvents);
+      state.allEvents = normalizedEvents;
+      state.totalEvents = Number(data?.total || normalizedEvents.length || 0);
+      state.version = Number(data?.version || 0);
+      state.selectedPeer = data?.selectedPeer || state.selectedPeer;
+      renderAll(state.allEvents);
+      lastUpdate.textContent = "Historial cargado (cache local)";
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function persistCachedState() {
+    try {
+      const events = Array.isArray(state.allEvents) ? state.allEvents.slice(-cache.maxEvents) : [];
+      if (!events.length) {
+        return;
+      }
+      window.localStorage.setItem(
+        cache.key,
+        JSON.stringify({
+          version: state.version,
+          total: state.totalEvents,
+          selectedPeer: state.selectedPeer,
+          events,
+        }),
+      );
+    } catch {
+      // Ignora errores de cuota / JSON / modo privado.
+    }
+  }
+
   function withToken(url) {
     if (!token) {
       return url;
@@ -761,8 +810,10 @@
       }
 
       hideError();
+      const incomingEvents = data.events || [];
+      const incomingTotal = Number(data.total || 0);
       if (incremental && sinceVersion > 0) {
-        const delta = data.events || [];
+        const delta = incomingEvents;
         if (delta.length > 0) {
           state.allEvents = state.allEvents.concat(delta);
           for (const ev of delta) {
@@ -777,15 +828,23 @@
           }
         }
       } else {
-        state.allEvents = data.events || [];
+        if (incomingTotal > 0 && incomingEvents.length === 0 && state.allEvents.length > 0) {
+          // Evita "parpadear" a vacio si llega una respuesta inconsistente.
+          if (!silent) {
+            showError("Respuesta vacia del monitor; conservando historial local.");
+          }
+        } else {
+          state.allEvents = incomingEvents;
+        }
         state.conversationByPeer = {};
       }
 
-      state.totalEvents = Number(data.total || state.allEvents.length || 0);
+      state.totalEvents = incomingTotal || state.allEvents.length || 0;
       renderAll(state.allEvents);
       setPausedUI(Boolean(data.paused));
       state.version = Number(data.version || state.version || 0);
       lastUpdate.textContent = `Ultima actualizacion: ${new Date().toLocaleTimeString()}`;
+      persistCachedState();
 
       if (!state.stream) {
         connectStream(result.url);
@@ -901,5 +960,6 @@
   });
 
   syncMobileLayout();
+  loadCachedState();
   loadEvents();
 })();
