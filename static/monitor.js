@@ -415,9 +415,28 @@
     if (!ts) {
       return "--:--";
     }
-    const date = new Date(ts.replace(" ", "T"));
-    if (Number.isNaN(date.getTime())) {
-      return ts;
+
+    const raw = String(ts).trim();
+    if (!raw) {
+      return "--:--";
+    }
+
+    let date = null;
+
+    // Epoch (segundos o milisegundos)
+    if (/^\d+$/.test(raw)) {
+      const numeric = Number(raw);
+      const millis = numeric > 1000000000000 ? numeric : numeric * 1000;
+      date = new Date(millis);
+    } else {
+      // Backend guarda "%Y-%m-%d %H:%M:%S" en UTC.
+      const normalized = raw.replace(" ", "T");
+      const looksLikeNaiveUtc = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(normalized);
+      date = new Date(looksLikeNaiveUtc ? `${normalized}Z` : normalized);
+    }
+
+    if (!date || Number.isNaN(date.getTime())) {
+      return raw;
     }
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }

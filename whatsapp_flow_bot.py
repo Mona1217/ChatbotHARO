@@ -1,6 +1,6 @@
 # app.py
 from collections import deque
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import hashlib
 import hmac
 from io import BytesIO
@@ -17,10 +17,11 @@ from urllib.parse import urlparse
 
 import requests
 from dotenv import load_dotenv
-from flask import Flask, Response, jsonify, redirect, render_template, request, send_file, session, url_for
+from flask import Flask, Response, jsonify, redirect, render_template, request, send_file, send_from_directory, session, url_for
 
 load_dotenv()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MEDIA_DIR = os.path.join(BASE_DIR, "media")
 app = Flask(
     __name__,
     template_folder=os.path.join(BASE_DIR, "templates"),
@@ -330,7 +331,47 @@ def init_monitor_db() -> None:
 
 
 def current_timestamp() -> str:
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Guardamos timestamps en UTC para que el monitor los renderice en la hora local del navegador.
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def normalize_monitor_event_ts(ts_value: Optional[object]) -> str:
+    """
+    Normaliza timestamps que llegan del webhook (por ejemplo, epoch en segundos)
+    a un string UTC compatible con el monitor ("%Y-%m-%d %H:%M:%S").
+
+    - Si viene None/vacio => ahora (UTC).
+    - Si viene un string numerico => epoch (segundos o milisegundos).
+    - Si viene un string con formato fecha => se intenta parsear como UTC.
+    """
+    if ts_value is None:
+        return current_timestamp()
+
+    raw = clean_text_value(ts_value)
+    if not raw:
+        return current_timestamp()
+
+    # WhatsApp suele enviar "timestamp" como epoch en segundos (string).
+    if raw.isdigit():
+        try:
+            epoch = int(raw)
+        except ValueError:
+            return current_timestamp()
+
+        # Heuristica: > 10^10 probablemente viene en milisegundos.
+        seconds = epoch / 1000.0 if epoch > 10_000_000_000 else float(epoch)
+        try:
+            dt = datetime.fromtimestamp(seconds, tz=timezone.utc)
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+        except Exception:
+            return current_timestamp()
+
+    # Formato historico del monitor (sin zona horaria): lo tratamos como UTC.
+    try:
+        dt = datetime.strptime(raw, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return current_timestamp()
 
 
 def get_last_monitor_ts_for_peer(peer: str) -> Optional[datetime]:
@@ -401,6 +442,7 @@ def add_monitor_event(
     body: Optional[str] = None,
     status: str = "ok",
     detail: str = "",
+    ts: Optional[object] = None,
 ) -> None:
     global MONITOR_VERSION
 
@@ -414,7 +456,7 @@ def add_monitor_event(
 
     event = {
         "version": version,
-        "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "ts": normalize_monitor_event_ts(ts),
         "direction": direction,
         "event_type": event_type,
         "peer": peer or "-",
@@ -1756,6 +1798,7 @@ def process_webhook_payload(payload: dict) -> None:
                 body=monitor_body,
                 status="dedup",
                 detail=f"msg_id={msg_id or '-'}",
+                ts=ts,
             )
             continue
 
@@ -1767,6 +1810,7 @@ def process_webhook_payload(payload: dict) -> None:
             body=monitor_body,
             status="ok",
             detail=f"msg_id={msg_id or '-'}",
+            ts=ts,
         )
 
         if not sender:
@@ -1787,6 +1831,7 @@ def process_webhook_payload(payload: dict) -> None:
                 body=f"[{clean_text_value(msg_type) or 'unknown'}]",
                 status="ignored",
                 detail=f"msg_id={msg_id or '-'}",
+                ts=ts,
             )
             continue
 
@@ -1798,6 +1843,7 @@ def process_webhook_payload(payload: dict) -> None:
                 body=incoming_text,
                 status="blocked",
                 detail="Mensaje procesado con BOT_PAUSED=true",
+                ts=ts,
             )
             send_whatsapp_text(sender, BOT_PAUSED_MESSAGE)
             continue
@@ -1976,6 +2022,11 @@ def monitor_logout():
 @app.get("/health")
 def health():
     return jsonify({"ok": True, "service": "whatsapp-webhook", "version": WHATSAPP_API_VERSION}), 200
+
+
+@app.get("/media/<path:filename>")
+def media_file(filename: str):
+    return send_from_directory(MEDIA_DIR, filename)
 
 
 @app.get("/webhook")
