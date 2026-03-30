@@ -60,6 +60,30 @@
     key: "haro_monitor_cache_v1",
     maxEvents: 800,
   };
+  const initialDataEl = document.getElementById("monitorInitialData");
+
+  function loadInitialStateFromDom() {
+    if (!initialDataEl) {
+      return false;
+    }
+    try {
+      const data = JSON.parse(initialDataEl.textContent || "{}");
+      const events = Array.isArray(data?.events) ? data.events : [];
+      if (!events.length) {
+        return false;
+      }
+      const normalizedEvents = events.slice(-cache.maxEvents);
+      state.allEvents = normalizedEvents;
+      state.totalEvents = Number(data?.total || normalizedEvents.length || 0);
+      state.version = Number(data?.version || 0);
+      renderAll(state.allEvents);
+      setPausedUI(Boolean(data?.paused));
+      lastUpdate.textContent = "Historial cargado (DB)";
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
   function loadCachedState() {
     try {
@@ -828,8 +852,8 @@
           }
         }
       } else {
-        if (incomingTotal > 0 && incomingEvents.length === 0 && state.allEvents.length > 0) {
-          // Evita "parpadear" a vacio si llega una respuesta inconsistente.
+        if (incomingEvents.length === 0 && state.allEvents.length > 0) {
+          // Evita "parpadear" a vacio si llega una respuesta vacia o inconsistente.
           if (!silent) {
             showError("Respuesta vacia del monitor; conservando historial local.");
           }
@@ -960,6 +984,9 @@
   });
 
   syncMobileLayout();
-  loadCachedState();
+  const loadedFromCache = loadCachedState();
+  if (!loadedFromCache) {
+    loadInitialStateFromDom();
+  }
   loadEvents();
 })();
