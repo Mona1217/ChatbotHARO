@@ -90,7 +90,7 @@
       </section>
     </section>
   </main>
-  <script id="monitorInitialData" type="application/json">{{ initial_monitor_data | tojson }}</script>
+  <script id="monitorInitialData" type="application/json">{{ initial_monitor_data | default({}, true) | tojson }}</script>
   <script src="{{ url_for('static', filename='monitor.js') }}"></script>
 </body>
 </html>
