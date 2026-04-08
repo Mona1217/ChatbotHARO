@@ -110,6 +110,13 @@ try:
 except ValueError:
     MONITOR_LOG_MAX = 0
 try:
+    # Numero de eventos a inyectar en el HTML del monitor para evitar pantalla vacia (0 => desactiva).
+    MONITOR_INITIAL_EVENTS_LIMIT = int(os.getenv("MONITOR_INITIAL_EVENTS_LIMIT", "800"))
+except ValueError:
+    MONITOR_INITIAL_EVENTS_LIMIT = 800
+if MONITOR_INITIAL_EVENTS_LIMIT < 0:
+    MONITOR_INITIAL_EVENTS_LIMIT = 0
+try:
     SESSION_TIMEOUT_MINUTES = int(os.getenv("SESSION_TIMEOUT_MINUTES", "10"))
 except ValueError:
     SESSION_TIMEOUT_MINUTES = 10
@@ -433,6 +440,32 @@ def insert_monitor_event_db(event: dict) -> None:
                     event.get("detail", ""),
                 ),
             )
+
+
+def get_monitor_initial_events(limit: int) -> List[dict]:
+    if limit <= 0:
+        return []
+
+    query = """
+        SELECT version, ts, direction, event_type, peer, body, status, detail
+        FROM monitor_events
+        ORDER BY version DESC
+        LIMIT ?
+    """
+
+    try:
+        with MONITOR_DB_LOCK:
+            with get_monitor_db_connection() as conn:
+                rows = conn.execute(query, (int(limit),)).fetchall()
+        # Devuelve en orden ascendente para que el frontend renderice cronologicamente.
+        return [dict(row) for row in reversed(rows)]
+    except Exception as e:
+        logger.exception("Error leyendo eventos iniciales de DB: %s", e)
+        with MESSAGE_EVENTS_LOCK:
+            events = list(MESSAGE_EVENTS)
+        if limit > 0:
+            events = events[-limit:]
+        return events
 
 
 def add_monitor_event(
@@ -1275,6 +1308,12 @@ def send_whatsapp_interactive(to_phone: str, interactive: dict) -> None:
 
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=20)
+        graph_msg_id = ""
+        try:
+            resp_data = resp.json() if resp.content else {}
+            graph_msg_id = clean_text_value(((resp_data or {}).get("messages") or [{}])[0].get("id"))
+        except Exception:
+            graph_msg_id = ""
         logger.info("SEND INTERACTIVE -> to=%s status=%s", to_phone, resp.status_code)
         add_monitor_event(
             direction="outbound",
@@ -1282,7 +1321,7 @@ def send_whatsapp_interactive(to_phone: str, interactive: dict) -> None:
             peer=to_phone,
             body=str(interactive),
             status="ok" if resp.status_code < 300 else "error",
-            detail=f"http={resp.status_code}",
+            detail=f"http={resp.status_code}" + (f" msg_id={graph_msg_id}" if graph_msg_id else ""),
         )
         if resp.status_code >= 300:
             logger.error("GRAPH ERROR (interactive): %s", resp.text)
@@ -1483,6 +1522,12 @@ def send_whatsapp_text(to_phone: str, body: str) -> None:
 
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=20)
+        graph_msg_id = ""
+        try:
+            resp_data = resp.json() if resp.content else {}
+            graph_msg_id = clean_text_value(((resp_data or {}).get("messages") or [{}])[0].get("id"))
+        except Exception:
+            graph_msg_id = ""
         logger.info("SEND TEXT -> to=%s status=%s", to_phone, resp.status_code)
         add_monitor_event(
             direction="outbound",
@@ -1490,7 +1535,7 @@ def send_whatsapp_text(to_phone: str, body: str) -> None:
             peer=to_phone,
             body=body,
             status="ok" if resp.status_code < 300 else "error",
-            detail=f"http={resp.status_code}",
+            detail=f"http={resp.status_code}" + (f" msg_id={graph_msg_id}" if graph_msg_id else ""),
         )
         if resp.status_code >= 300:
             logger.error("GRAPH ERROR (text): %s", resp.text)
@@ -1567,6 +1612,12 @@ def send_whatsapp_template(
 
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=20)
+        graph_msg_id = ""
+        try:
+            resp_data = resp.json() if resp.content else {}
+            graph_msg_id = clean_text_value(((resp_data or {}).get("messages") or [{}])[0].get("id"))
+        except Exception:
+            graph_msg_id = ""
         logger.info("SEND TEMPLATE -> to=%s status=%s", to_phone, resp.status_code)
         add_monitor_event(
             direction="outbound",
@@ -1574,7 +1625,7 @@ def send_whatsapp_template(
             peer=to_phone,
             body=template_name,
             status="ok" if resp.status_code < 300 else "error",
-            detail=f"http={resp.status_code}",
+            detail=f"http={resp.status_code}" + (f" msg_id={graph_msg_id}" if graph_msg_id else ""),
         )
         if resp.status_code >= 300:
             logger.error("GRAPH ERROR (template): %s", resp.text)
@@ -1634,6 +1685,12 @@ def send_whatsapp_image(to_phone: str, image_url: str, caption: Optional[str] = 
 
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=20)
+        graph_msg_id = ""
+        try:
+            resp_data = resp.json() if resp.content else {}
+            graph_msg_id = clean_text_value(((resp_data or {}).get("messages") or [{}])[0].get("id"))
+        except Exception:
+            graph_msg_id = ""
         logger.info("SEND IMAGE -> to=%s status=%s", to_phone, resp.status_code)
         add_monitor_event(
             direction="outbound",
@@ -1641,7 +1698,7 @@ def send_whatsapp_image(to_phone: str, image_url: str, caption: Optional[str] = 
             peer=to_phone,
             body=image_url,
             status="ok" if resp.status_code < 300 else "error",
-            detail=f"http={resp.status_code}",
+            detail=f"http={resp.status_code}" + (f" msg_id={graph_msg_id}" if graph_msg_id else ""),
         )
         if resp.status_code >= 300:
             logger.error("GRAPH ERROR (image): %s", resp.text)
@@ -1668,11 +1725,30 @@ def iterate_incoming_messages(payload: dict):
             field = change.get("field")
             value = change.get("value", {}) or {}
             msgs = value.get("messages", []) or []
+            statuses = value.get("statuses", []) or []
 
-            logger.info("CHANGE field=%s has_messages=%s", field, bool(msgs))
+            logger.info(
+                "CHANGE field=%s has_messages=%s has_statuses=%s",
+                field,
+                bool(msgs),
+                bool(statuses),
+            )
 
             for msg in msgs:
                 yield msg
+
+
+def iterate_status_updates(payload: dict):
+    """
+    Devuelve updates de estado (value.statuses) que Meta envía cuando un mensaje
+    outbound cambia de estado: sent/delivered/read/failed, etc.
+    """
+    for entry in payload.get("entry", []):
+        for change in entry.get("changes", []):
+            value = change.get("value", {}) or {}
+            statuses = value.get("statuses", []) or []
+            for st in statuses:
+                yield st
 
 
 def extract_phone_number_id(payload: dict) -> str:
@@ -1782,6 +1858,43 @@ def process_webhook_payload(payload: dict) -> None:
     phone_number_id = extract_phone_number_id(payload)
     now = datetime.now()
     purge_expired_sessions(now)
+
+    # Registrar estados de envío (sent/delivered/read/failed) para que el monitor
+    # muestre también los callbacks de Meta sobre "mensajes enviados".
+    for st in iterate_status_updates(payload):
+        recipient = clean_text_value(st.get("recipient_id") or st.get("recipient") or st.get("to"))
+        wa_msg_id = clean_text_value(st.get("id") or st.get("message_id") or st.get("messageId"))
+        wa_status = clean_text_value(st.get("status") or "status")
+        ts = st.get("timestamp", "")
+
+        detail_parts = []
+        if wa_msg_id:
+            detail_parts.append(f"msg_id={wa_msg_id}")
+        convo_id = clean_text_value((st.get("conversation") or {}).get("id"))
+        if convo_id:
+            detail_parts.append(f"conversation_id={convo_id}")
+        pricing = st.get("pricing")
+        if pricing:
+            try:
+                detail_parts.append(f"pricing={json.dumps(pricing, ensure_ascii=False)}")
+            except Exception:
+                detail_parts.append("pricing=[unserializable]")
+        errors = st.get("errors")
+        if errors:
+            try:
+                detail_parts.append(f"errors={json.dumps(errors, ensure_ascii=False)}")
+            except Exception:
+                detail_parts.append("errors=[unserializable]")
+
+        add_monitor_event(
+            direction="system",
+            event_type="whatsapp_status",
+            peer=recipient or "-",
+            body=wa_status,
+            status=wa_status,
+            detail=" ".join(detail_parts),
+            ts=ts,
+        )
 
     for message in iterate_incoming_messages(payload):
         msg_id = message.get("id")
@@ -2150,6 +2263,35 @@ def monitor_dashboard():
         return "unauthorized", 401
 
     token = request.args.get("token", "")
+    initial_events: List[dict] = []
+    if MONITOR_INITIAL_EVENTS_LIMIT:
+        try:
+            initial_events = get_monitor_initial_events(MONITOR_INITIAL_EVENTS_LIMIT)
+        except Exception as exc:
+            logger.exception("No se pudieron cargar eventos iniciales del monitor: %s", exc)
+
+    initial_monitor_data = {
+        "ok": True,
+        "paused": BOT_PAUSED,
+        "count": len(initial_events),
+        "total": get_monitor_total_events(peer=None),
+        "version": get_monitor_version(),
+        "peer": "",
+        "events": initial_events,
+    }
+    try:
+        json.dumps(initial_monitor_data, ensure_ascii=False)
+    except TypeError as exc:
+        logger.exception("initial_monitor_data no serializable: %s", exc)
+        initial_monitor_data = {
+            "ok": True,
+            "paused": BOT_PAUSED,
+            "count": 0,
+            "total": 0,
+            "version": get_monitor_version(),
+            "peer": "",
+            "events": [],
+        }
     return render_template(
         "monitor.html",
         token=token,
@@ -2160,6 +2302,7 @@ def monitor_dashboard():
         export_url=url_for("monitor_export_contacts"),
         export_chat_url=url_for("monitor_export_chat"),
         monitor_login_enabled=is_monitor_login_enabled(),
+        initial_monitor_data=initial_monitor_data,
     )
 
 
