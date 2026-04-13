@@ -505,8 +505,28 @@ body::before {
   color: var(--haro-ink);
 }
 
+.msg-sender {
+  margin-bottom: 6px;
+  padding-right: 54px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--haro-soft-ink);
+}
+
 .msg-detail {
   margin-top: 6px;
+  padding-right: 54px;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--haro-soft-ink);
+}
+
+.msg-footer {
+  margin-top: 8px;
   padding-right: 54px;
   font-size: 11px;
   line-height: 1.45;
@@ -526,6 +546,77 @@ body::before {
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  color: var(--haro-soft-ink);
+}
+
+.msg-media-card,
+.msg-template-card,
+.msg-section-card {
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.msg-media-label,
+.msg-template-name,
+.msg-section-title,
+.msg-section-row-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--haro-ink);
+}
+
+.msg-media-url,
+.msg-template-params,
+.msg-section-row-description {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--haro-soft-ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.msg-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  margin-bottom: 2px;
+}
+
+.msg-option-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--haro-ink);
+}
+
+.msg-sections {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.msg-section-row + .msg-section-row {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(17, 17, 17, 0.08);
+}
+
+.msg-delivery {
+  margin-top: 8px;
+  padding-right: 54px;
+  font-size: 10px;
+  font-weight: 700;
   color: var(--haro-soft-ink);
 }
 

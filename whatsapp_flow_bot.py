@@ -252,18 +252,35 @@ def summarize_message_for_monitor(msg_type: Optional[str], text: Optional[str]) 
     return f"[{clean_text_value(msg_type) or 'unknown'}]"
 
 
+MONITOR_META_PREFIX = "__monitor_meta__:"
+
+
 def join_monitor_detail_parts(*parts: Optional[str]) -> str:
     cleaned = [clean_text_value(part) for part in parts if clean_text_value(part)]
     return " | ".join(cleaned)
 
 
-def summarize_interactive_for_monitor(interactive: Optional[dict]) -> Tuple[str, str]:
+def encode_monitor_detail(meta: Optional[dict] = None, detail: Optional[str] = None) -> str:
+    chunks: List[str] = []
+    if isinstance(meta, dict) and meta:
+        try:
+            chunks.append(f"{MONITOR_META_PREFIX}{json.dumps(meta, ensure_ascii=False)}")
+        except Exception:
+            logger.exception("No se pudo serializar monitor meta")
+    detail_text = clean_text_value(detail)
+    if detail_text:
+        chunks.append(detail_text)
+    return "\n".join(chunks)
+
+
+def summarize_interactive_for_monitor(interactive: Optional[dict]) -> Tuple[str, str, dict]:
     interactive = interactive or {}
     body_text = optional_text_value((interactive.get("body") or {}).get("text"))
     footer_text = optional_text_value((interactive.get("footer") or {}).get("text"))
     interactive_type = clean_text_value(interactive.get("type")) or "interactive"
     action = interactive.get("action") or {}
     option_labels: List[str] = []
+    sections_meta: List[dict] = []
 
     buttons = action.get("buttons") or []
     if isinstance(buttons, list):
@@ -275,24 +292,39 @@ def summarize_interactive_for_monitor(interactive: Optional[dict]) -> Tuple[str,
     sections = action.get("sections") or []
     if isinstance(sections, list):
         for section in sections:
+            section_title = optional_text_value((section or {}).get("title"))
             rows = (section or {}).get("rows") or []
             if not isinstance(rows, list):
                 continue
+            section_rows: List[dict] = []
             for row in rows:
                 title = optional_text_value((row or {}).get("title"))
                 if title:
                     option_labels.append(title)
+                description = optional_text_value((row or {}).get("description"))
+                if title or description:
+                    section_rows.append({"title": title, "description": description})
+            if section_title or section_rows:
+                sections_meta.append({"title": section_title, "rows": section_rows})
 
     summary = body_text or f"[interactive:{interactive_type}]"
     options_preview = ", ".join(option_labels[:6])
     if len(option_labels) > 6:
         options_preview += ", ..."
-    detail = join_monitor_detail_parts(
+    visible_detail = join_monitor_detail_parts(
         f"tipo={interactive_type}",
         f"opciones={options_preview}" if options_preview else "",
         f"footer={footer_text}" if footer_text else "",
     )
-    return summary, detail
+    meta = {
+        "kind": "interactive",
+        "interactive_type": interactive_type,
+        "body": summary,
+        "footer": footer_text,
+        "buttons": option_labels if interactive_type == "button" else [],
+        "sections": sections_meta,
+    }
+    return summary, visible_detail, meta
 
 
 def record_skipped_action(peer: str, action_type: str, reason: str) -> None:
@@ -1314,7 +1346,7 @@ def extract_text_from_message(message: dict) -> Optional[str]:
 
 def send_whatsapp_interactive(to_phone: str, interactive: dict) -> None:
     to_phone = clean_text_value(to_phone)
-    body_text, monitor_detail = summarize_interactive_for_monitor(interactive)
+    body_text, visible_detail, monitor_meta = summarize_interactive_for_monitor(interactive)
     if not to_phone:
         add_monitor_event(
             direction="system",
@@ -1364,10 +1396,13 @@ def send_whatsapp_interactive(to_phone: str, interactive: dict) -> None:
             peer=to_phone,
             body=body_text,
             status="ok" if resp.status_code < 300 else "error",
-            detail=join_monitor_detail_parts(
-                monitor_detail,
-                f"http={resp.status_code}",
-                f"msg_id={graph_msg_id}" if graph_msg_id else "",
+            detail=encode_monitor_detail(
+                monitor_meta,
+                join_monitor_detail_parts(
+                    visible_detail,
+                    f"http={resp.status_code}",
+                    f"msg_id={graph_msg_id}" if graph_msg_id else "",
+                ),
             ),
         )
         if resp.status_code >= 300:
@@ -1379,7 +1414,13 @@ def send_whatsapp_interactive(to_phone: str, interactive: dict) -> None:
             peer=to_phone,
             body=body_text,
             status="exception",
-            detail=join_monitor_detail_parts(monitor_detail, str(e)),
+            detail=encode_monitor_detail(
+                monitor_meta,
+                join_monitor_detail_parts(
+                    visible_detail,
+                    str(e),
+                ),
+            ),
         )
         logger.exception("EXCEPTION sending interactive to=%s err=%s", to_phone, e)
 
@@ -1582,7 +1623,16 @@ def send_whatsapp_text(to_phone: str, body: str) -> None:
             peer=to_phone,
             body=body,
             status="ok" if resp.status_code < 300 else "error",
-            detail=f"http={resp.status_code}" + (f" msg_id={graph_msg_id}" if graph_msg_id else ""),
+            detail=encode_monitor_detail(
+                {
+                    "kind": "text",
+                    "body": body,
+                },
+                join_monitor_detail_parts(
+                    f"http={resp.status_code}",
+                    f"msg_id={graph_msg_id}" if graph_msg_id else "",
+                ),
+            ),
         )
         if resp.status_code >= 300:
             logger.error("GRAPH ERROR (text): %s", resp.text)
@@ -1593,7 +1643,13 @@ def send_whatsapp_text(to_phone: str, body: str) -> None:
             peer=to_phone,
             body=body,
             status="exception",
-            detail=str(e),
+            detail=encode_monitor_detail(
+                {
+                    "kind": "text",
+                    "body": body,
+                },
+                str(e),
+            ),
         )
         logger.exception("EXCEPTION sending text to=%s err=%s", to_phone, e)
 
@@ -1672,11 +1728,20 @@ def send_whatsapp_template(
             peer=to_phone,
             body=f"[template] {template_name}",
             status="ok" if resp.status_code < 300 else "error",
-            detail=join_monitor_detail_parts(
-                f"lang={language_code}",
-                f"params={', '.join(filtered_body_params)}" if filtered_body_params else "",
-                f"http={resp.status_code}",
-                f"msg_id={graph_msg_id}" if graph_msg_id else "",
+            detail=encode_monitor_detail(
+                {
+                    "kind": "template",
+                    "template_name": template_name,
+                    "language_code": language_code,
+                    "params": filtered_body_params,
+                    "body": f"[template] {template_name}",
+                },
+                join_monitor_detail_parts(
+                    f"lang={language_code}",
+                    f"params={', '.join(filtered_body_params)}" if filtered_body_params else "",
+                    f"http={resp.status_code}",
+                    f"msg_id={graph_msg_id}" if graph_msg_id else "",
+                ),
             ),
         )
         if resp.status_code >= 300:
@@ -1688,10 +1753,19 @@ def send_whatsapp_template(
             peer=to_phone,
             body=f"[template] {template_name}",
             status="exception",
-            detail=join_monitor_detail_parts(
-                f"lang={language_code}",
-                f"params={', '.join(filtered_body_params)}" if filtered_body_params else "",
-                str(e),
+            detail=encode_monitor_detail(
+                {
+                    "kind": "template",
+                    "template_name": template_name,
+                    "language_code": language_code,
+                    "params": filtered_body_params,
+                    "body": f"[template] {template_name}",
+                },
+                join_monitor_detail_parts(
+                    f"lang={language_code}",
+                    f"params={', '.join(filtered_body_params)}" if filtered_body_params else "",
+                    str(e),
+                ),
             ),
         )
         logger.exception("EXCEPTION sending template to=%s err=%s", to_phone, e)
@@ -1754,10 +1828,18 @@ def send_whatsapp_image(to_phone: str, image_url: str, caption: Optional[str] = 
             peer=to_phone,
             body=caption or "[imagen]",
             status="ok" if resp.status_code < 300 else "error",
-            detail=join_monitor_detail_parts(
-                image_url,
-                f"http={resp.status_code}",
-                f"msg_id={graph_msg_id}" if graph_msg_id else "",
+            detail=encode_monitor_detail(
+                {
+                    "kind": "image",
+                    "body": caption or "[imagen]",
+                    "caption": caption or "",
+                    "image_url": image_url,
+                },
+                join_monitor_detail_parts(
+                    image_url,
+                    f"http={resp.status_code}",
+                    f"msg_id={graph_msg_id}" if graph_msg_id else "",
+                ),
             ),
         )
         if resp.status_code >= 300:
@@ -1769,7 +1851,15 @@ def send_whatsapp_image(to_phone: str, image_url: str, caption: Optional[str] = 
             peer=to_phone,
             body=caption or "[imagen]",
             status="exception",
-            detail=join_monitor_detail_parts(image_url, str(e)),
+            detail=encode_monitor_detail(
+                {
+                    "kind": "image",
+                    "body": caption or "[imagen]",
+                    "caption": caption or "",
+                    "image_url": image_url,
+                },
+                join_monitor_detail_parts(image_url, str(e)),
+            ),
         )
         logger.exception("EXCEPTION sending image to=%s err=%s", to_phone, e)
 

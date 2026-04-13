@@ -1,4 +1,5 @@
 (function () {
+  const MONITOR_META_PREFIX = "__monitor_meta__:";
   const body = document.body;
   const query = new URLSearchParams(window.location.search);
 
@@ -474,6 +475,54 @@
     return event.body || event.detail || event.event_type || "(sin contenido)";
   }
 
+  function isWhatsAppStatusEvent(event) {
+    return event?.event_type === "whatsapp_status";
+  }
+
+  function extractMsgId(value) {
+    const raw = value ? String(value) : "";
+    const match = raw.match(/msg_id=([^\s|]+)/);
+    return match ? match[1] : "";
+  }
+
+  function getRenderableEvents(events) {
+    return (events || []).filter((event) => !isWhatsAppStatusEvent(event));
+  }
+
+  function buildStatusIndex(events) {
+    const index = new Map();
+    (events || []).forEach((event) => {
+      if (!isWhatsAppStatusEvent(event)) {
+        return;
+      }
+      const msgId = extractMsgId(event.detail);
+      if (!msgId) {
+        return;
+      }
+      index.set(msgId, {
+        status: event.status || event.body || "",
+        ts: event.ts || "",
+      });
+    });
+    return index;
+  }
+
+  function extractMonitorMeta(detail) {
+    const raw = detail ? String(detail) : "";
+    if (!raw.startsWith(MONITOR_META_PREFIX)) {
+      return { meta: null, visibleDetail: raw };
+    }
+
+    const breakIndex = raw.indexOf("\n");
+    const metaRaw = breakIndex >= 0 ? raw.slice(MONITOR_META_PREFIX.length, breakIndex) : raw.slice(MONITOR_META_PREFIX.length);
+    const visibleDetail = breakIndex >= 0 ? raw.slice(breakIndex + 1).trim() : "";
+    try {
+      return { meta: JSON.parse(metaRaw), visibleDetail };
+    } catch {
+      return { meta: null, visibleDetail: raw };
+    }
+  }
+
   function sortEventsChronologically(events) {
     return [...events].sort((a, b) => {
       const versionA = Number(a?.version || 0);
@@ -630,9 +679,10 @@
 
     const contacts = Array.from(map.values()).sort((a, b) => b.lastIndex - a.lastIndex);
     contacts.forEach((contact) => {
-      contact.lastEvent = contact.events[contact.events.length - 1];
+      const renderableEvents = getRenderableEvents(contact.events);
+      contact.lastEvent = renderableEvents[renderableEvents.length - 1] || contact.events[contact.events.length - 1];
       contact.preview = getPreview(contact.lastEvent);
-      contact.count = contact.events.length;
+      contact.count = renderableEvents.length || contact.events.length;
     });
     return contacts;
   }
@@ -686,7 +736,146 @@
     contactCount.textContent = String(contacts.length);
   }
 
-  function buildMessageNode(event) {
+  function appendTextBlock(container, text, className = "msg-body") {
+    if (!text) {
+      return;
+    }
+    const node = document.createElement("div");
+    node.className = className;
+    node.textContent = text;
+    container.appendChild(node);
+  }
+
+  function buildStructuredContent(event, bubble, monitorMeta) {
+    const kind = monitorMeta?.kind || event.event_type || "";
+
+    if (kind === "image") {
+      const mediaCard = document.createElement("div");
+      mediaCard.className = "msg-media-card";
+
+      const mediaLabel = document.createElement("div");
+      mediaLabel.className = "msg-media-label";
+      mediaLabel.textContent = "Imagen enviada";
+      mediaCard.appendChild(mediaLabel);
+
+      if (monitorMeta?.image_url) {
+        const mediaUrl = document.createElement("div");
+        mediaUrl.className = "msg-media-url";
+        mediaUrl.textContent = monitorMeta.image_url;
+        mediaCard.appendChild(mediaUrl);
+      }
+
+      bubble.appendChild(mediaCard);
+      appendTextBlock(bubble, monitorMeta?.caption || event.body || "[imagen]");
+      return true;
+    }
+
+    if (kind === "template") {
+      const templateCard = document.createElement("div");
+      templateCard.className = "msg-template-card";
+
+      const templateName = document.createElement("div");
+      templateName.className = "msg-template-name";
+      templateName.textContent = monitorMeta?.template_name || event.body || "[template]";
+      templateCard.appendChild(templateName);
+
+      if (Array.isArray(monitorMeta?.params) && monitorMeta.params.length) {
+        const paramsNode = document.createElement("div");
+        paramsNode.className = "msg-template-params";
+        paramsNode.textContent = monitorMeta.params.join(" | ");
+        templateCard.appendChild(paramsNode);
+      }
+
+      bubble.appendChild(templateCard);
+      return true;
+    }
+
+    if (kind === "interactive") {
+      appendTextBlock(bubble, monitorMeta?.body || event.body || "[interactive]");
+
+      const buttons = Array.isArray(monitorMeta?.buttons) ? monitorMeta.buttons : [];
+      if (buttons.length) {
+        const buttonWrap = document.createElement("div");
+        buttonWrap.className = "msg-options";
+        buttons.forEach((label) => {
+          const chip = document.createElement("span");
+          chip.className = "msg-option-chip";
+          chip.textContent = label;
+          buttonWrap.appendChild(chip);
+        });
+        bubble.appendChild(buttonWrap);
+      }
+
+      const sections = Array.isArray(monitorMeta?.sections) ? monitorMeta.sections : [];
+      if (sections.length) {
+        const sectionsWrap = document.createElement("div");
+        sectionsWrap.className = "msg-sections";
+        sections.forEach((section) => {
+          const sectionNode = document.createElement("div");
+          sectionNode.className = "msg-section-card";
+          if (section?.title) {
+            const title = document.createElement("div");
+            title.className = "msg-section-title";
+            title.textContent = section.title;
+            sectionNode.appendChild(title);
+          }
+          const rows = Array.isArray(section?.rows) ? section.rows : [];
+          rows.forEach((row) => {
+            const rowNode = document.createElement("div");
+            rowNode.className = "msg-section-row";
+
+            const rowTitle = document.createElement("div");
+            rowTitle.className = "msg-section-row-title";
+            rowTitle.textContent = row?.title || "(sin titulo)";
+            rowNode.appendChild(rowTitle);
+
+            if (row?.description) {
+              const rowDescription = document.createElement("div");
+              rowDescription.className = "msg-section-row-description";
+              rowDescription.textContent = row.description;
+              rowNode.appendChild(rowDescription);
+            }
+
+            sectionNode.appendChild(rowNode);
+          });
+          sectionsWrap.appendChild(sectionNode);
+        });
+        bubble.appendChild(sectionsWrap);
+      }
+
+      if (monitorMeta?.footer) {
+        appendTextBlock(bubble, monitorMeta.footer, "msg-footer");
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  function formatDeliveryStatus(status) {
+    const normalized = String(status || "").trim().toLowerCase();
+    if (normalized === "read") {
+      return "Leido";
+    }
+    if (normalized === "delivered") {
+      return "Entregado";
+    }
+    if (normalized === "sent") {
+      return "Enviado";
+    }
+    if (normalized === "failed") {
+      return "Fallido";
+    }
+    if (normalized === "error") {
+      return "Error";
+    }
+    if (normalized === "ok") {
+      return "Enviado";
+    }
+    return normalized ? normalized : "";
+  }
+
+  function buildMessageNode(event, statusIndex) {
     const messageClass =
       event.direction === "inbound"
         ? "inbound"
@@ -700,30 +889,56 @@
     const bubble = document.createElement("div");
     bubble.className = "bubble";
 
-    const bodyText = document.createElement("div");
-    bodyText.className = "msg-body";
-    bodyText.textContent = event.body || event.detail || "(sin contenido)";
+    const { meta: monitorMeta, visibleDetail } = extractMonitorMeta(event.detail);
+    const renderedStructured = buildStructuredContent(event, bubble, monitorMeta);
+    const messageMsgId = extractMsgId(visibleDetail);
+    const delivery = messageMsgId ? statusIndex.get(messageMsgId) : null;
+    const detailForBubble =
+      event.direction === "outbound" && monitorMeta
+        ? ""
+        : visibleDetail;
 
-    bubble.appendChild(bodyText);
+    if (event.direction === "outbound") {
+      const sender = document.createElement("div");
+      sender.className = "msg-sender";
+      sender.textContent = "Chatbot HARO";
+      bubble.appendChild(sender);
+    }
 
-    if (event.event_type && event.event_type !== "text") {
+    if (!renderedStructured) {
+      appendTextBlock(bubble, event.body || detailForBubble || "(sin contenido)");
+    }
+
+    if (event.event_type && event.event_type !== "text" && event.direction !== "outbound") {
       const meta = document.createElement("div");
       meta.className = "msg-meta";
       meta.textContent = event.event_type;
       bubble.appendChild(meta);
     }
 
-    if (event.detail) {
+    if (detailForBubble) {
       const detailText = document.createElement("div");
       detailText.className = "msg-detail";
-      detailText.textContent = event.detail;
+      detailText.textContent = detailForBubble;
       bubble.appendChild(detailText);
+    }
+
+    if (event.direction === "outbound") {
+      const deliveryNode = document.createElement("div");
+      deliveryNode.className = "msg-delivery";
+      const deliveryLabel = formatDeliveryStatus(delivery?.status || event.status);
+      deliveryNode.textContent = deliveryLabel || "Enviado";
+      bubble.appendChild(deliveryNode);
     }
 
     const time = document.createElement("div");
     time.className = "msg-time";
     time.textContent = formatClock(event.ts, { includeSeconds: true });
-    time.title = [formatFullTimestamp(event.ts), event.status, event.detail].filter(Boolean).join(" | ");
+    time.title = [
+      formatFullTimestamp(event.ts),
+      delivery?.status || event.status,
+      visibleDetail,
+    ].filter(Boolean).join(" | ");
     bubble.appendChild(time);
 
     row.appendChild(bubble);
@@ -748,8 +963,10 @@
       return;
     }
 
-    const events = getEventsForPeer(peer);
-    const lastEvent = events.length ? events[events.length - 1] : null;
+    const allEvents = getEventsForPeer(peer);
+    const statusIndex = buildStatusIndex(allEvents);
+    const events = getRenderableEvents(allEvents);
+    const lastEvent = events.length ? events[events.length - 1] : allEvents[allEvents.length - 1] || null;
 
     activeContact.textContent = peer;
     activeMeta.textContent = `Último: ${formatHeaderStamp(lastEvent?.ts)}`;
@@ -761,7 +978,7 @@
         chatTimeline.appendChild(buildDaySeparator(event.ts));
         lastDayKey = dayKey;
       }
-      chatTimeline.appendChild(buildMessageNode(event));
+      chatTimeline.appendChild(buildMessageNode(event, statusIndex));
     });
     chatEmpty.classList.toggle("hidden", events.length > 0);
     chatTimeline.scrollTop = chatTimeline.scrollHeight;
