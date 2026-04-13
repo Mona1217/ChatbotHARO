@@ -252,6 +252,49 @@ def summarize_message_for_monitor(msg_type: Optional[str], text: Optional[str]) 
     return f"[{clean_text_value(msg_type) or 'unknown'}]"
 
 
+def join_monitor_detail_parts(*parts: Optional[str]) -> str:
+    cleaned = [clean_text_value(part) for part in parts if clean_text_value(part)]
+    return " | ".join(cleaned)
+
+
+def summarize_interactive_for_monitor(interactive: Optional[dict]) -> Tuple[str, str]:
+    interactive = interactive or {}
+    body_text = optional_text_value((interactive.get("body") or {}).get("text"))
+    footer_text = optional_text_value((interactive.get("footer") or {}).get("text"))
+    interactive_type = clean_text_value(interactive.get("type")) or "interactive"
+    action = interactive.get("action") or {}
+    option_labels: List[str] = []
+
+    buttons = action.get("buttons") or []
+    if isinstance(buttons, list):
+        for button in buttons:
+            title = optional_text_value(((button or {}).get("reply") or {}).get("title"))
+            if title:
+                option_labels.append(title)
+
+    sections = action.get("sections") or []
+    if isinstance(sections, list):
+        for section in sections:
+            rows = (section or {}).get("rows") or []
+            if not isinstance(rows, list):
+                continue
+            for row in rows:
+                title = optional_text_value((row or {}).get("title"))
+                if title:
+                    option_labels.append(title)
+
+    summary = body_text or f"[interactive:{interactive_type}]"
+    options_preview = ", ".join(option_labels[:6])
+    if len(option_labels) > 6:
+        options_preview += ", ..."
+    detail = join_monitor_detail_parts(
+        f"tipo={interactive_type}",
+        f"opciones={options_preview}" if options_preview else "",
+        f"footer={footer_text}" if footer_text else "",
+    )
+    return summary, detail
+
+
 def record_skipped_action(peer: str, action_type: str, reason: str) -> None:
     logger.warning("SKIPPED ACTION -> peer=%s type=%s reason=%s", peer, action_type, reason)
     add_monitor_event(
@@ -1271,7 +1314,7 @@ def extract_text_from_message(message: dict) -> Optional[str]:
 
 def send_whatsapp_interactive(to_phone: str, interactive: dict) -> None:
     to_phone = clean_text_value(to_phone)
-    body_text = optional_text_value((interactive or {}).get("body", {}).get("text"))
+    body_text, monitor_detail = summarize_interactive_for_monitor(interactive)
     if not to_phone:
         add_monitor_event(
             direction="system",
@@ -1319,9 +1362,13 @@ def send_whatsapp_interactive(to_phone: str, interactive: dict) -> None:
             direction="outbound",
             event_type="interactive",
             peer=to_phone,
-            body=str(interactive),
+            body=body_text,
             status="ok" if resp.status_code < 300 else "error",
-            detail=f"http={resp.status_code}" + (f" msg_id={graph_msg_id}" if graph_msg_id else ""),
+            detail=join_monitor_detail_parts(
+                monitor_detail,
+                f"http={resp.status_code}",
+                f"msg_id={graph_msg_id}" if graph_msg_id else "",
+            ),
         )
         if resp.status_code >= 300:
             logger.error("GRAPH ERROR (interactive): %s", resp.text)
@@ -1330,9 +1377,9 @@ def send_whatsapp_interactive(to_phone: str, interactive: dict) -> None:
             direction="outbound",
             event_type="interactive",
             peer=to_phone,
-            body=str(interactive),
+            body=body_text,
             status="exception",
-            detail=str(e),
+            detail=join_monitor_detail_parts(monitor_detail, str(e)),
         )
         logger.exception("EXCEPTION sending interactive to=%s err=%s", to_phone, e)
 
@@ -1623,9 +1670,14 @@ def send_whatsapp_template(
             direction="outbound",
             event_type="template",
             peer=to_phone,
-            body=template_name,
+            body=f"[template] {template_name}",
             status="ok" if resp.status_code < 300 else "error",
-            detail=f"http={resp.status_code}" + (f" msg_id={graph_msg_id}" if graph_msg_id else ""),
+            detail=join_monitor_detail_parts(
+                f"lang={language_code}",
+                f"params={', '.join(filtered_body_params)}" if filtered_body_params else "",
+                f"http={resp.status_code}",
+                f"msg_id={graph_msg_id}" if graph_msg_id else "",
+            ),
         )
         if resp.status_code >= 300:
             logger.error("GRAPH ERROR (template): %s", resp.text)
@@ -1634,9 +1686,13 @@ def send_whatsapp_template(
             direction="outbound",
             event_type="template",
             peer=to_phone,
-            body=template_name,
+            body=f"[template] {template_name}",
             status="exception",
-            detail=str(e),
+            detail=join_monitor_detail_parts(
+                f"lang={language_code}",
+                f"params={', '.join(filtered_body_params)}" if filtered_body_params else "",
+                str(e),
+            ),
         )
         logger.exception("EXCEPTION sending template to=%s err=%s", to_phone, e)
 
@@ -1696,9 +1752,13 @@ def send_whatsapp_image(to_phone: str, image_url: str, caption: Optional[str] = 
             direction="outbound",
             event_type="image",
             peer=to_phone,
-            body=image_url,
+            body=caption or "[imagen]",
             status="ok" if resp.status_code < 300 else "error",
-            detail=f"http={resp.status_code}" + (f" msg_id={graph_msg_id}" if graph_msg_id else ""),
+            detail=join_monitor_detail_parts(
+                image_url,
+                f"http={resp.status_code}",
+                f"msg_id={graph_msg_id}" if graph_msg_id else "",
+            ),
         )
         if resp.status_code >= 300:
             logger.error("GRAPH ERROR (image): %s", resp.text)
@@ -1707,9 +1767,9 @@ def send_whatsapp_image(to_phone: str, image_url: str, caption: Optional[str] = 
             direction="outbound",
             event_type="image",
             peer=to_phone,
-            body=image_url,
+            body=caption or "[imagen]",
             status="exception",
-            detail=str(e),
+            detail=join_monitor_detail_parts(image_url, str(e)),
         )
         logger.exception("EXCEPTION sending image to=%s err=%s", to_phone, e)
 

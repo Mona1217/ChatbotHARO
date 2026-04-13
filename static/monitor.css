@@ -505,6 +505,30 @@ body::before {
   color: var(--haro-ink);
 }
 
+.msg-detail {
+  margin-top: 6px;
+  padding-right: 54px;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--haro-soft-ink);
+}
+
+.msg-meta {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.06);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--haro-soft-ink);
+}
+
 .msg-time {
   position: absolute;
   right: 12px;

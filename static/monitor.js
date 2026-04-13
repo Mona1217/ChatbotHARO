@@ -474,14 +474,46 @@
     return event.body || event.detail || event.event_type || "(sin contenido)";
   }
 
+  function sortEventsChronologically(events) {
+    return [...events].sort((a, b) => {
+      const versionA = Number(a?.version || 0);
+      const versionB = Number(b?.version || 0);
+      if (versionA !== versionB) {
+        return versionA - versionB;
+      }
+      const tsA = parseMonitorTimestamp(a?.ts)?.getTime() || 0;
+      const tsB = parseMonitorTimestamp(b?.ts)?.getTime() || 0;
+      return tsA - tsB;
+    });
+  }
+
+  function mergeUniqueEvents(...groups) {
+    const merged = new Map();
+    groups.flat().forEach((event, index) => {
+      if (!event) {
+        return;
+      }
+      const version = Number(event.version || 0);
+      const fallbackKey = `${normalizePeer(event)}|${event.ts || ""}|${event.direction || ""}|${event.event_type || ""}|${event.body || ""}|${index}`;
+      const key = version > 0 ? `v:${version}` : `f:${fallbackKey}`;
+      if (!merged.has(key)) {
+        merged.set(key, event);
+      }
+    });
+    return sortEventsChronologically(Array.from(merged.values()));
+  }
+
   function getEventsForPeer(peer) {
     if (!peer) {
       return [];
     }
-    if (state.conversationByPeer[peer]) {
-      return state.conversationByPeer[peer];
+    const liveEvents = state.allEvents.filter((event) => normalizePeer(event) === peer);
+    const cachedEvents = state.conversationByPeer[peer] || [];
+    const merged = mergeUniqueEvents(cachedEvents, liveEvents);
+    if (merged.length) {
+      state.conversationByPeer[peer] = merged;
     }
-    return state.allEvents.filter((event) => normalizePeer(event) === peer);
+    return merged;
   }
 
   function parseMonitorTimestamp(ts) {
@@ -674,10 +706,24 @@
 
     bubble.appendChild(bodyText);
 
+    if (event.event_type && event.event_type !== "text") {
+      const meta = document.createElement("div");
+      meta.className = "msg-meta";
+      meta.textContent = event.event_type;
+      bubble.appendChild(meta);
+    }
+
+    if (event.detail) {
+      const detailText = document.createElement("div");
+      detailText.className = "msg-detail";
+      detailText.textContent = event.detail;
+      bubble.appendChild(detailText);
+    }
+
     const time = document.createElement("div");
     time.className = "msg-time";
     time.textContent = formatClock(event.ts, { includeSeconds: true });
-    time.title = formatFullTimestamp(event.ts);
+    time.title = [formatFullTimestamp(event.ts), event.status, event.detail].filter(Boolean).join(" | ");
     bubble.appendChild(time);
 
     row.appendChild(bubble);
@@ -839,16 +885,10 @@
       if (incremental && sinceVersion > 0) {
         const delta = incomingEvents;
         if (delta.length > 0) {
-          state.allEvents = state.allEvents.concat(delta);
+          state.allEvents = mergeUniqueEvents(state.allEvents, delta);
           for (const ev of delta) {
             const peer = normalizePeer(ev);
-            if (state.conversationByPeer[peer]) {
-              const cached = state.conversationByPeer[peer];
-              const exists = cached.some((item) => Number(item.version || 0) === Number(ev.version || -1));
-              if (!exists) {
-                cached.push(ev);
-              }
-            }
+            state.conversationByPeer[peer] = mergeUniqueEvents(state.conversationByPeer[peer] || [], [ev]);
           }
         }
       } else {
@@ -858,7 +898,7 @@
             showError("Respuesta vacia del monitor; conservando historial local.");
           }
         } else {
-          state.allEvents = incomingEvents;
+          state.allEvents = mergeUniqueEvents(incomingEvents);
         }
         state.conversationByPeer = {};
       }
